@@ -1,0 +1,47 @@
+{
+  "name": "drfuhrman-ai-landing",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "DrFurman.ai landing page — Astro + React islands, deployed to Cloudflare Workers Static Assets",
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro",
+    "og": "node scripts/build-og.mjs && rsvg-convert -w 1200 -h 630 assets-source/og-card.svg -o public/og.png",
+    "deploy:prod": "astro build && wrangler deploy",
+    "deploy:staging": "astro build && wrangler deploy --env staging",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:deployed": "E2E_BASE_URL=https://drfuhrman-ai-landing.divinci-ai.workers.dev playwright test"
+  },
+  "dependencies": {
+    "@astrojs/react": "^5.0.7",
+    "@divinci-ai/client": "^0.2.0",
+    "@tailwindcss/vite": "^4.3.0",
+    "astro": "^6.4.4",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "tailwindcss": "^4.3.0"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.9",
+    "@playwright/test": "^1.60.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitest/coverage-v8": "^4.1.7",
+    "@vitest/ui": "^4.1.7",
+    "jsdom": "^29.1.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.7",
+    "wrangler": "^4.0.0"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}
