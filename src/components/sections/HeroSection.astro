@@ -73,8 +73,21 @@ const t = getUI(lang).hero;
           padding: 74px;
           border-radius: 50%;
         }
+        /* The glass orb must always be a PERFECT circle, never an oval.
+           `border-radius: 50%` only renders a circle on a square box, so
+           we decouple the glass from the content-driven wrapper height:
+           cancel the Tailwind `inset-0`, then size it as a square
+           (aspect-ratio 1:1, diameter = wrapper width) centered in the
+           wrapper. Content floats over it via the sibling z-10 layer, so
+           the orb stays circular no matter how tall the conversation grows. */
         .chat-glass {
-          margin-top: 49px;
+          inset: auto;
+          left: 50%;
+          top: 50%;
+          transform: translate(-50%, -50%);
+          width: 100%;
+          height: auto;
+          aspect-ratio: 1 / 1;
           border-radius: 50%;
           border: 1px solid rgba(255, 255, 255, 0.1);
           background-image: var(--chat-glass-gradient);

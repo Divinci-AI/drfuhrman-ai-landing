@@ -31,11 +31,13 @@ interface MockClaimRecord {
 
 class MockQuotaDONamespace {
   claims = new Map<string, MockClaimRecord>();
+  starterUsed = new Map<string, number>();
   windowMax = 5;
   windowSeconds = 86400;
 
   getByName(hash: string) {
     const claims = this.claims;
+    const starterUsed = this.starterUsed;
     const windowMax = this.windowMax;
     const windowSeconds = this.windowSeconds;
     return {
@@ -57,6 +59,18 @@ class MockQuotaDONamespace {
           verifiedSends: [],
         });
         return { allowed: true, priorVerified: false };
+      },
+      releaseClaim: async (emailHash: string) => {
+        const row = claims.get(emailHash);
+        if (!row || row.verified) return { released: false };
+        claims.delete(emailHash);
+        return { released: true };
+      },
+      claimStarter: async (limit: number) => {
+        const used = starterUsed.get(hash) ?? 0;
+        if (used >= limit) return { allowed: false, used, limit };
+        starterUsed.set(hash, used + 1);
+        return { allowed: true, used: used + 1, limit };
       },
       markVerified: async (emailHash: string) => {
         const row = claims.get(emailHash);
@@ -411,6 +425,135 @@ describe("worker: /api/chat-send quota gate", () => {
       expect(body.error).toBe("upstream_error");
       // KV should NOT be written on upstream failure.
       expect(env.EMAIL_QUOTA.store.size).toBe(0);
+      // And the fresh manual claim must be ROLLED BACK so a transient
+      // upstream failure doesn't permanently burn the free message.
+      expect(env.QUOTA_DO.claims.size).toBe(0);
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
+  it("claim rolled back on failure lets the visitor retry successfully", async () => {
+    const env = makeEnv();
+    const okPayload = {
+      transcript: [
+        { prompt: "hi", promptTimestamp: 1, response: "hello", responseTimestamp: 2, context: [] },
+      ],
+      signiture: "sig",
+    };
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response("boom", { status: 500 }))
+      .mockResolvedValue(
+        new Response(JSON.stringify(okPayload), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+    const send = () =>
+      fetchHandler(
+        new Request("https://x.workers.dev/api/chat-send", {
+          method: "POST",
+          headers: {
+            Authorization: authHeader("dfo", "secret-pw"),
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email: "retry@gmail.com", newPrompt: "hi" }),
+        }),
+        // @ts-expect-error partial env
+        env,
+      );
+    try {
+      const r1 = await send();
+      expect(r1.status).toBe(502);
+      expect(env.QUOTA_DO.claims.size).toBe(0); // rolled back
+      const r2 = await send();
+      expect(r2.status).toBe(200); // retry succeeds — message wasn't burned
+      expect(env.QUOTA_DO.claims.size).toBe(1);
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
+  it("starter sends use a separate budget and don't burn the manual message", async () => {
+    const env = makeEnv();
+    const okPayload = {
+      transcript: [
+        { prompt: "q", promptTimestamp: 1, response: "a", responseTimestamp: 2, context: [] },
+      ],
+      signiture: "sig",
+    };
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(
+      async () =>
+        new Response(JSON.stringify(okPayload), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+    );
+    const post = (extra: Record<string, unknown>) =>
+      fetchHandler(
+        new Request("https://x.workers.dev/api/chat-send", {
+          method: "POST",
+          headers: {
+            Authorization: authHeader("dfo", "secret-pw"),
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email: "s@gmail.com", newPrompt: "q", ...extra }),
+        }),
+        // @ts-expect-error partial env
+        env,
+      );
+    try {
+      // A starter send succeeds without creating a manual claim.
+      const r1 = await post({ starter: true });
+      expect(r1.status).toBe(200);
+      expect(env.QUOTA_DO.claims.size).toBe(0);
+      // The visitor still has their free MANUAL message afterwards.
+      const r2 = await post({});
+      expect(r2.status).toBe(200);
+      expect(env.QUOTA_DO.claims.size).toBe(1);
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
+  it("starter budget is capped (402 starter_quota_exhausted past the limit)", async () => {
+    const env = makeEnv();
+    const okPayload = {
+      transcript: [
+        { prompt: "q", promptTimestamp: 1, response: "a", responseTimestamp: 2, context: [] },
+      ],
+      signiture: "sig",
+    };
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(
+      async () =>
+        new Response(JSON.stringify(okPayload), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+    );
+    const post = () =>
+      fetchHandler(
+        new Request("https://x.workers.dev/api/chat-send", {
+          method: "POST",
+          headers: {
+            Authorization: authHeader("dfo", "secret-pw"),
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email: "cap@gmail.com", newPrompt: "q", starter: true }),
+        }),
+        // @ts-expect-error partial env
+        env,
+      );
+    try {
+      // STARTER_QUOTA_LIMIT is 6 in the worker.
+      for (let i = 0; i < 6; i++) {
+        expect((await post()).status).toBe(200);
+      }
+      const over = await post();
+      expect(over.status).toBe(402);
+      const body = (await over.json()) as { error: string };
+      expect(body.error).toBe("starter_quota_exhausted");
     } finally {
       fetchSpy.mockRestore();
     }

@@ -82,6 +82,17 @@ export class EmailQuotaCoordinator extends DurableObject {
           sent_at INTEGER PRIMARY KEY
         )
       `);
+      // Conversation-starter leniency (added 2026-06-05): starter clicks
+      // are cheap (cached via the Cloudflare AI Gateway) and are the
+      // engagement hook, so they get a separate, more generous per-email
+      // budget that does NOT consume the single lifetime manual message.
+      // Singleton counter row (id always 0) per email-hash DO instance.
+      this.ctx.storage.sql.exec(`
+        CREATE TABLE IF NOT EXISTS starter_quota (
+          id    INTEGER PRIMARY KEY,
+          used  INTEGER NOT NULL DEFAULT 0
+        )
+      `);
       // Idempotent migration: instances created under the v1 schema
       // (before Phase 4) won't have the verified columns. SQLite has
       // no IF NOT EXISTS for ADD COLUMN, so we try and swallow the
@@ -138,6 +149,63 @@ export class EmailQuotaCoordinator extends DurableObject {
       new Date().toISOString(),
     );
     return { allowed: true, priorVerified: false };
+  }
+
+  /**
+   * Release a lifetime claim that was just recorded by `claim()` but whose
+   * downstream chat call failed. Phase 2 records the claim BEFORE the
+   * upstream call for atomicity, which means a transient upstream failure
+   * (e.g. a 502/403 from the API) would otherwise permanently burn the
+   * visitor's single free message even though they never got a reply.
+   * The worker calls this when `claim.allowed === true` and the upstream
+   * returned non-OK or threw, so the visitor can retry.
+   *
+   * Only deletes UNVERIFIED claims — a verified row represents a confirmed
+   * email and must never be rolled back. (The worker only ever calls this
+   * right after a fresh `allowed:true` claim, which is always unverified,
+   * but we guard here as defense-in-depth.)
+   */
+  async releaseClaim(emailHash: string): Promise<{ released: boolean }> {
+    const row = this.ctx.storage.sql
+      .exec<{ verified: number }>(
+        `SELECT verified FROM quota_claim WHERE email_hash = ?`,
+        emailHash,
+      )
+      .toArray()[0];
+    if (!row || row.verified === 1) return { released: false };
+    this.ctx.storage.sql.exec(
+      `DELETE FROM quota_claim WHERE email_hash = ? AND verified = 0`,
+      emailHash,
+    );
+    return { released: true };
+  }
+
+  /**
+   * Claim one conversation-starter send against this email's separate,
+   * more-generous starter budget. Returns allowed=false once `limit` is
+   * reached. Starter sends do NOT touch the lifetime manual-message claim,
+   * so a visitor can explore the cached starter questions and still keep
+   * their one free personal message.
+   *
+   * NOTE on abuse: like the 1-message gate, this is bounded per-email, so
+   * the ceiling is "limit cached questions per email, then rotate email"
+   * — the same email-rotation ceiling the existing gate already has, just
+   * a slightly higher per-email allowance for the cheap cached path.
+   */
+  async claimStarter(
+    limit: number,
+  ): Promise<{ allowed: boolean; used: number; limit: number }> {
+    this.ctx.storage.sql.exec(
+      `INSERT OR IGNORE INTO starter_quota (id, used) VALUES (0, 0)`,
+    );
+    const used = this.ctx.storage.sql
+      .exec<{ used: number }>(`SELECT used FROM starter_quota WHERE id = 0`)
+      .toArray()[0].used;
+    if (used >= limit) {
+      return { allowed: false, used, limit };
+    }
+    this.ctx.storage.sql.exec(`UPDATE starter_quota SET used = used + 1 WHERE id = 0`);
+    return { allowed: true, used: used + 1, limit };
   }
 
   /**

@@ -5,6 +5,12 @@ export interface TranscriptMessage {
   role: "user" | "assistant";
   content: string;
   pending?: boolean;
+  /**
+   * True for a user message that came from a conversation-starter pill.
+   * Starter sends draw on a separate budget and don't count toward the
+   * single free manual message, so the quota math excludes them.
+   */
+  isStarter?: boolean;
 }
 
 interface TranscriptProps {

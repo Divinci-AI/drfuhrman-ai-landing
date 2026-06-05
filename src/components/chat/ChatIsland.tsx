@@ -99,16 +99,22 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
   }, [chatStarted]);
 
   const handleSend = useCallback(
-    async (rawContent: string) => {
+    async (rawContent: string, opts?: { starter?: boolean }) => {
       const content = rawContent.trim();
+      const isStarter = opts?.starter === true;
       if (!content) return;
       if (!isValidEmail(email)) {
         setError(t.errorEmailRequired);
         return;
       }
-      // Quota gate — anonymous visitors get FREE_MESSAGE_QUOTA messages.
-      const userMessagesSoFar = messages.filter((m) => m.role === "user").length;
-      if (userMessagesSoFar >= FREE_MESSAGE_QUOTA) return;
+      // Quota gate — anonymous visitors get FREE_MESSAGE_QUOTA *manual*
+      // messages. Conversation-starter sends use a separate, more-generous
+      // budget (cached via the CF AI Gateway) and don't count here, so a
+      // visitor can explore the starters AND still ask their own question.
+      const manualMessagesSoFar = messages.filter(
+        (m) => m.role === "user" && !m.isStarter,
+      ).length;
+      if (!isStarter && manualMessagesSoFar >= FREE_MESSAGE_QUOTA) return;
       if (pending) return;
       setError(null);
 
@@ -116,6 +122,7 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
         id: crypto.randomUUID(),
         role: "user",
         content,
+        isStarter,
       };
       const assistantPlaceholder: TranscriptMessage = {
         id: crypto.randomUUID(),
@@ -146,6 +153,9 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
           body: JSON.stringify({
             email: email.trim(),
             newPrompt: content,
+            // Mark starter sends so the worker draws on the separate
+            // starter budget instead of the lifetime manual message.
+            ...(isStarter ? { starter: true } : {}),
             // When the page is in a non-English locale, ask the
             // assistant to answer in that language. Omitted for English.
             ...(chatLanguage ? { language: chatLanguage } : {}),
@@ -153,8 +163,21 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
         });
 
         if (resp.status === 402) {
-          // Quota exhausted — clear placeholder, mark transcript so the
-          // existing quotaExhausted derivation flips to SignupCTA.
+          // A starter-budget 402 must NOT flip the page to the SignupCTA —
+          // the visitor still has their free manual message. Just clear
+          // the bubbles so they can ask their own question.
+          if (isStarter) {
+            setMessages((prev) =>
+              prev.filter(
+                (m) =>
+                  m.id !== assistantPlaceholder.id && m.id !== userMsg.id,
+              ),
+            );
+            setError(null);
+            return;
+          }
+          // Manual quota exhausted — clear placeholder, mark transcript so
+          // the quotaExhausted derivation flips to SignupCTA.
           setMessages((prev) =>
             prev.filter((m) => m.id !== assistantPlaceholder.id),
           );
@@ -221,8 +244,12 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
 
   const showStarters = messages.length === 0;
   const emailRequired = !isValidEmail(email);
-  const userMessageCount = messages.filter((m) => m.role === "user").length;
-  const quotaExhausted = userMessageCount >= FREE_MESSAGE_QUOTA && !pending;
+  // Only MANUAL user messages count toward the free-message quota; starter
+  // sends draw on their own budget and never trip the SignupCTA.
+  const manualUserCount = messages.filter(
+    (m) => m.role === "user" && !m.isStarter,
+  ).length;
+  const quotaExhausted = manualUserCount >= FREE_MESSAGE_QUOTA && !pending;
 
   return (
     <>
@@ -235,12 +262,18 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
             starters={t.starters}
             disabled={pending}
             onSelect={(text) => {
-              // Populate the input + focus the textarea — same UX as
-              // the lower example cards. User reviews + presses Enter
-              // to send. Avoids the previous "starter click silently
-              // fails when email gate is open" trap.
-              setDraft(text);
-              setFocusSignal((n) => n + 1);
+              // If the visitor already has a valid email, send the starter
+              // immediately — one tap, no extra "Ask" click (starters are
+              // cheap/cached and use a separate budget, so this doesn't
+              // burn their free manual message). Otherwise fall back to
+              // pre-filling the input + focusing so they can enter their
+              // email first, then send.
+              if (isValidEmail(email)) {
+                handleSend(text, { starter: true });
+              } else {
+                setDraft(text);
+                setFocusSignal((n) => n + 1);
+              }
             }}
           />
         </>
