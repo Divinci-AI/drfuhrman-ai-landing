@@ -181,6 +181,37 @@ export class EmailQuotaCoordinator extends DurableObject {
   }
 
   /**
+   * Admin/support reset — fully clears this email's quota state so the
+   * visitor starts fresh: deletes the lifetime manual claim (verified or
+   * not) AND zeroes the starter budget. Only reachable via the
+   * bearer-token-guarded /api/admin/reset-quota worker route. Pure local
+   * SQLite — opens no connections, so it carries no duration-billing risk.
+   */
+  async adminReset(
+    emailHash: string,
+  ): Promise<{ clearedClaim: boolean; clearedStarter: boolean }> {
+    const claimRow = this.ctx.storage.sql
+      .exec(`SELECT email_hash FROM quota_claim WHERE email_hash = ?`, emailHash)
+      .toArray()[0];
+    if (claimRow) {
+      this.ctx.storage.sql.exec(
+        `DELETE FROM quota_claim WHERE email_hash = ?`,
+        emailHash,
+      );
+    }
+    const starterRow = this.ctx.storage.sql
+      .exec(`SELECT used FROM starter_quota WHERE id = 0`)
+      .toArray()[0];
+    if (starterRow) {
+      this.ctx.storage.sql.exec(`DELETE FROM starter_quota WHERE id = 0`);
+    }
+    return {
+      clearedClaim: Boolean(claimRow),
+      clearedStarter: Boolean(starterRow),
+    };
+  }
+
+  /**
    * Claim one conversation-starter send against this email's separate,
    * more-generous starter budget. Returns allowed=false once `limit` is
    * reached. Starter sends do NOT touch the lifetime manual-message claim,

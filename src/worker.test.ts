@@ -18,6 +18,9 @@ class MockKVNamespace {
   async put(key: string, value: string) {
     this.store.set(key, { value });
   }
+  async delete(key: string) {
+    this.store.delete(key);
+  }
 }
 
 interface MockClaimRecord {
@@ -71,6 +74,11 @@ class MockQuotaDONamespace {
         if (used >= limit) return { allowed: false, used, limit };
         starterUsed.set(hash, used + 1);
         return { allowed: true, used: used + 1, limit };
+      },
+      adminReset: async (emailHash: string) => {
+        const clearedClaim = claims.delete(emailHash);
+        const clearedStarter = starterUsed.delete(hash);
+        return { clearedClaim, clearedStarter };
       },
       markVerified: async (emailHash: string) => {
         const row = claims.get(emailHash);
@@ -142,6 +150,7 @@ interface MockEnv {
   DIVINCI_RELEASE_ID: string;
   RESEND_API_KEY?: string;
   VERIFY_TOKEN_SECRET?: string;
+  ADMIN_RESET_TOKEN?: string;
 }
 
 function makeEnv(overrides: Partial<MockEnv> = {}): MockEnv {
@@ -801,6 +810,93 @@ describe("worker: Phase 4 chat-send verified-window flow", () => {
       expect(body.windowMax).toBe(5);
     } finally {
       spy.mockRestore();
+    }
+  });
+});
+
+describe("worker: /api/admin/reset-quota", () => {
+  it("404→ASSETS when ADMIN_RESET_TOKEN is unset (feature disabled)", async () => {
+    const env = makeEnv(); // no ADMIN_RESET_TOKEN
+    const resp = await fetchHandler(
+      new Request("https://x.workers.dev/api/admin/reset-quota", {
+        method: "POST",
+        headers: { Authorization: "Bearer anything", "Content-Type": "application/json" },
+        body: JSON.stringify({ email: "mike@gmail.com" }),
+      }),
+      // @ts-expect-error partial env
+      env,
+    );
+    // Disabled route falls through to ASSETS (no admin surface exposed).
+    expect(await resp.text()).toBe("ASSETS_BODY");
+  });
+
+  it("401 with a wrong bearer token", async () => {
+    const env = makeEnv({ ADMIN_RESET_TOKEN: "s3cret-admin" });
+    const resp = await fetchHandler(
+      new Request("https://x.workers.dev/api/admin/reset-quota", {
+        method: "POST",
+        headers: { Authorization: "Bearer nope", "Content-Type": "application/json" },
+        body: JSON.stringify({ email: "mike@gmail.com" }),
+      }),
+      // @ts-expect-error partial env
+      env,
+    );
+    expect(resp.status).toBe(401);
+  });
+
+  it("200 clears the claim so the visitor can chat again", async () => {
+    const env = makeEnv({ ADMIN_RESET_TOKEN: "s3cret-admin" });
+    const okPayload = {
+      transcript: [
+        { prompt: "hi", promptTimestamp: 1, response: "hello", responseTimestamp: 2, context: [] },
+      ],
+      signiture: "sig",
+    };
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(
+      async () =>
+        new Response(JSON.stringify(okPayload), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+    );
+    const sendManual = () =>
+      fetchHandler(
+        new Request("https://x.workers.dev/api/chat-send", {
+          method: "POST",
+          headers: {
+            Authorization: authHeader("dfo", "secret-pw"),
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email: "mike@gmail.com", newPrompt: "hi" }),
+        }),
+        // @ts-expect-error partial env
+        env,
+      );
+    try {
+      expect((await sendManual()).status).toBe(200); // burns the claim
+      expect((await sendManual()).status).toBe(402); // exhausted
+      // Admin reset clears it.
+      const reset = await fetchHandler(
+        new Request("https://x.workers.dev/api/admin/reset-quota", {
+          method: "POST",
+          headers: {
+            Authorization: "Bearer s3cret-admin",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email: "mike@gmail.com" }),
+        }),
+        // @ts-expect-error partial env
+        env,
+      );
+      expect(reset.status).toBe(200);
+      const rbody = (await reset.json()) as { ok: boolean; clearedClaim: boolean };
+      expect(rbody.ok).toBe(true);
+      expect(rbody.clearedClaim).toBe(true);
+      expect(env.QUOTA_DO.claims.size).toBe(0);
+      // ...and the visitor can chat again.
+      expect((await sendManual()).status).toBe(200);
+    } finally {
+      fetchSpy.mockRestore();
     }
   });
 });
