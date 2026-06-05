@@ -40,12 +40,18 @@ export function StickyChatBar({
   // hides again as the footer approaches so it never overlaps it.
   const [heroPast, setHeroPast] = useState(false);
   const [footerNear, setFooterNear] = useState(false);
-  const visible = heroPast && !footerNear;
+  // The static transcript showcase has its OWN composer; showing the sticky
+  // bar over it produces a confusing double input. Hide the sticky bar while
+  // that section is on screen (clicking the showcase scrolls up to the real
+  // hero input anyway).
+  const [showcaseNear, setShowcaseNear] = useState(false);
+  const visible = heroPast && !footerNear && !showcaseNear;
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     const hero = document.getElementById("hero");
     const footer = document.querySelector("footer");
+    const showcase = document.getElementById("transcripts");
     const observers: IntersectionObserver[] = [];
     if (hero) {
       const io = new IntersectionObserver(
@@ -61,6 +67,15 @@ export function StickyChatBar({
         { rootMargin: "0px 0px 160px 0px" },
       );
       io.observe(footer);
+      observers.push(io);
+    }
+    if (showcase) {
+      const io = new IntersectionObserver(
+        ([entry]) => setShowcaseNear(entry.isIntersecting),
+        // Trigger a bit before it fully enters so the bars never co-exist.
+        { rootMargin: "0px 0px 120px 0px" },
+      );
+      io.observe(showcase);
       observers.push(io);
     }
     return () => observers.forEach((o) => o.disconnect());

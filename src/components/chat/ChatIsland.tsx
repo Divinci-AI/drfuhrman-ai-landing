@@ -27,6 +27,9 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
   // Localized chat strings for the current page locale — so the chat's
   // greeting, starters, gate form, and errors switch with the page.
   const t = getUI(lang).chat;
+  // Header strings for the active chat card reuse the static showcase's
+  // `transcript` dict (e.g. the "Online" status pill).
+  const tt = getUI(lang).transcript;
   const divinciRef = useRef(getDivinci());
   // The language we ask the assistant to respond in. English is the
   // default and needs no instruction (the model already answers in the
@@ -96,6 +99,11 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
     if (!chatStarted) return;
     const bg = document.getElementById("hero-bg");
     if (bg) bg.classList.add("opacity-10");
+    // Expand the orb into the full-width chat card (the glass circle fades
+    // out + the wrapper drops its circular padding — see HeroSection's
+    // `.chat-panel-wrapper.chat-active` rules).
+    const wrapper = document.querySelector(".chat-panel-wrapper");
+    if (wrapper) wrapper.classList.add("chat-active");
   }, [chatStarted]);
 
   const handleSend = useCallback(
@@ -192,15 +200,28 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
         }
 
         const data = (await resp.json()) as {
-          transcript?: Array<{ prompt?: string; response?: string }>;
+          transcript?: Array<{
+            prompt?: string;
+            response?: string;
+            context?: Array<{ metadata?: { originalName?: string } }>;
+          }>;
         };
         const lastMsg = data.transcript?.[data.transcript.length - 1];
         const reply = lastMsg?.response ?? "(no response)";
+        // Deduped retrieved-source filenames → rendered as chips above the
+        // reply, mirroring the static showcase.
+        const sources = Array.from(
+          new Set(
+            (lastMsg?.context ?? [])
+              .map((c) => c.metadata?.originalName)
+              .filter((n): n is string => typeof n === "string" && n.length > 0),
+          ),
+        );
 
         setMessages((prev) =>
           prev.map((m) =>
             m.id === assistantPlaceholder.id
-              ? { ...m, content: reply, pending: false }
+              ? { ...m, content: reply, sources, pending: false }
               : m,
           ),
         );
@@ -278,8 +299,53 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
           />
         </>
       )}
-      {messages.length > 0 && <Transcript messages={messages} />}
-      {quotaExhausted ? (
+      {messages.length > 0 ? (
+        // Active chat — "grows out" of the orb into a wide card that mirrors
+        // the static TranscriptShowcase (header · messages · single composer).
+        <div className="df-active-card overflow-hidden rounded-3xl border border-df-green-dark/15 bg-gradient-to-b from-df-green-leaf/10 to-white shadow-lg ring-1 ring-black/5">
+          <div className="flex items-center gap-2 border-b border-df-green-dark/10 bg-white/70 px-5 py-3 backdrop-blur-sm">
+            <span className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-df-green-leaf/20 ring-1 ring-df-green-dark/15">
+              <img
+                src="/drfuhrman-logo.svg"
+                alt=""
+                aria-hidden="true"
+                className="h-4 w-4"
+                width={16}
+                height={16}
+              />
+            </span>
+            <span className="font-semibold text-df-green-dark">Dr. Fuhrman AI</span>
+            <span className="ml-auto inline-flex items-center gap-1.5 text-xs text-gray-500">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-df-green-leaf opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-df-green-mid" />
+              </span>
+              {tt.online}
+            </span>
+          </div>
+          <div className="px-4 py-5 md:px-6">
+            <Transcript messages={messages} />
+          </div>
+          <div className="border-t border-df-green-dark/10 bg-white/70 p-3 backdrop-blur-sm">
+            {quotaExhausted ? (
+              <SignupCTA lang={lang} />
+            ) : (
+              <MessageInput
+                compact
+                lang={lang}
+                email={email}
+                onEmailChange={setEmail}
+                emailRequired={emailRequired}
+                draft={draft}
+                onDraftChange={setDraft}
+                focusSignal={focusSignal}
+                onSend={handleSend}
+                pending={pending}
+              />
+            )}
+          </div>
+        </div>
+      ) : quotaExhausted ? (
         <SignupCTA lang={lang} />
       ) : (
         <MessageInput

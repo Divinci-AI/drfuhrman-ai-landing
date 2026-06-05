@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 
 export interface TranscriptMessage {
   id: string;
@@ -11,6 +11,12 @@ export interface TranscriptMessage {
    * single free manual message, so the quota math excludes them.
    */
   isStarter?: boolean;
+  /**
+   * Deduped retrieved-source filenames (from the response's `context`
+   * metadata.originalName) — rendered as chips above the assistant reply,
+   * mirroring the static TranscriptShowcase.
+   */
+  sources?: string[];
 }
 
 interface TranscriptProps {
@@ -26,7 +32,7 @@ export function Transcript({ messages }: TranscriptProps) {
 
   return (
     <div
-      className="flex max-h-[480px] flex-col gap-4 overflow-y-auto pr-1"
+      className="df-chat-scroll flex max-h-[26rem] flex-col gap-5 overflow-y-auto px-1 md:max-h-[32rem]"
       role="log"
       aria-live="polite"
     >
@@ -34,10 +40,11 @@ export function Transcript({ messages }: TranscriptProps) {
         m.role === "user" ? (
           <UserBubble key={m.id} content={m.content} />
         ) : (
-          <AssistantBubble
+          <AssistantTurn
             key={m.id}
             content={m.content}
             pending={m.pending}
+            sources={m.sources}
           />
         ),
       )}
@@ -46,34 +53,111 @@ export function Transcript({ messages }: TranscriptProps) {
   );
 }
 
+function DfAvatar() {
+  return (
+    <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-df-green-leaf/20 ring-1 ring-df-green-dark/15">
+      <img
+        src="/drfuhrman-logo.svg"
+        alt=""
+        aria-hidden="true"
+        className="h-4 w-4"
+        width={16}
+        height={16}
+      />
+    </span>
+  );
+}
+
 function UserBubble({ content }: { content: string }) {
   return (
     <div className="flex justify-end">
-      <div className="max-w-[85%] rounded-2xl rounded-tr-sm bg-df-bubble-user px-4 py-3 text-sm leading-relaxed text-df-text">
+      <p className="max-w-[88%] rounded-2xl rounded-br-sm bg-df-green-dark px-4 py-2.5 text-left text-sm font-medium text-white md:text-base">
         {content}
+      </p>
+    </div>
+  );
+}
+
+function AssistantTurn({
+  content,
+  pending,
+  sources,
+}: {
+  content: string;
+  pending?: boolean;
+  sources?: string[];
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      {sources && sources.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 pl-9">
+          {sources.map((s) => (
+            <span
+              key={s}
+              className="inline-flex max-w-full items-center gap-1 rounded-md border border-df-green-dark/15 bg-white/80 px-2 py-1 text-xs text-gray-600"
+            >
+              <span aria-hidden="true">{sourceIcon(s)}</span>
+              <span className="truncate">{s}</span>
+            </span>
+          ))}
+        </div>
+      )}
+      <div className="flex items-start gap-2">
+        <DfAvatar />
+        <div className="max-w-[88%] space-y-2 rounded-2xl rounded-tl-sm bg-df-green-leaf/15 px-4 py-3 text-sm leading-relaxed text-df-text shadow-sm md:text-base">
+          {content ? (
+            renderRichText(content)
+          ) : pending ? (
+            <ThinkingDots />
+          ) : null}
+          {pending && content && <BlinkingCursor />}
+        </div>
       </div>
     </div>
   );
 }
 
-function AssistantBubble({
-  content,
-  pending,
-}: {
-  content: string;
-  pending?: boolean;
-}) {
-  return (
-    <div className="flex items-start gap-3">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-df-green-dark text-sm font-bold text-white">
-        DF
-      </div>
-      <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-white px-4 py-3 text-sm leading-relaxed text-df-text shadow-sm ring-1 ring-black/5">
-        {content || (pending ? <ThinkingDots /> : "")}
-        {pending && content && <BlinkingCursor />}
-      </div>
-    </div>
-  );
+function sourceIcon(name: string): string {
+  const ext = name.split(".").pop()?.toLowerCase();
+  if (ext === "txt") return "📑";
+  if (ext === "html" || ext === "htm") return "🌐";
+  return "📄";
+}
+
+// Lightweight inline formatter — mirrors the static showcase's mini-syntax
+// so the live reply renders **bold** / *italic* instead of raw asterisks,
+// split into paragraphs on blank lines. Deliberately small (no markdown
+// dependency); anything it doesn't recognise renders as plain text.
+function renderRichText(text: string): ReactNode {
+  const paragraphs = text
+    .replace(/\r\n/g, "\n")
+    .split(/\n{2,}/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  return paragraphs.map((para, i) => <p key={i}>{renderInline(para)}</p>);
+}
+
+function renderInline(s: string): ReactNode[] {
+  const out: ReactNode[] = [];
+  const re = /\*\*([^*]+)\*\*|\*([^*]+)\*/g;
+  let last = 0;
+  let m: RegExpExecArray | null;
+  let key = 0;
+  while ((m = re.exec(s)) !== null) {
+    if (m.index > last) out.push(s.slice(last, m.index));
+    if (m[1] !== undefined) {
+      out.push(
+        <strong key={key++} className="font-semibold">
+          {m[1]}
+        </strong>,
+      );
+    } else if (m[2] !== undefined) {
+      out.push(<em key={key++}>{m[2]}</em>);
+    }
+    last = re.lastIndex;
+  }
+  if (last < s.length) out.push(s.slice(last));
+  return out;
 }
 
 function ThinkingDots() {
