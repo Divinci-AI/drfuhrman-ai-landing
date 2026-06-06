@@ -119,14 +119,13 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
         setError(t.errorEmailRequired);
         return;
       }
-      // Quota gate — anonymous visitors get FREE_MESSAGE_QUOTA *manual*
-      // messages. Conversation-starter sends use a separate, more-generous
-      // budget (cached via the CF AI Gateway) and don't count here, so a
-      // visitor can explore the starters AND still ask their own question.
-      const manualMessagesSoFar = messages.filter(
-        (m) => m.role === "user" && !m.isStarter,
+      // Quota gate — anonymous visitors get FREE_MESSAGE_QUOTA free answer(s)
+      // total: a clicked conversation-starter OR a typed question both spend
+      // it, after which the input is replaced by the sign-up / log-in CTA.
+      const userMessagesSoFar = messages.filter(
+        (m) => m.role === "user",
       ).length;
-      if (!isStarter && manualMessagesSoFar >= FREE_MESSAGE_QUOTA) return;
+      if (userMessagesSoFar >= FREE_MESSAGE_QUOTA) return;
       if (pending) return;
       setError(null);
 
@@ -301,12 +300,11 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
 
   const showStarters = messages.length === 0;
   const emailRequired = !isValidEmail(email);
-  // Only MANUAL user messages count toward the free-message quota; starter
-  // sends draw on their own budget and never trip the SignupCTA.
-  const manualUserCount = messages.filter(
-    (m) => m.role === "user" && !m.isStarter,
-  ).length;
-  const quotaExhausted = manualUserCount >= FREE_MESSAGE_QUOTA && !pending;
+  // EVERY user message counts toward the free-message quota — clicking a
+  // conversation-starter OR typing a question both spend the one free answer,
+  // after which the input swaps to the sign-up / log-in CTA.
+  const userMessageCount = messages.filter((m) => m.role === "user").length;
+  const quotaExhausted = userMessageCount >= FREE_MESSAGE_QUOTA && !pending;
 
   return (
     <>
