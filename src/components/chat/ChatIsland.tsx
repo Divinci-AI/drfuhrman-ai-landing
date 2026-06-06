@@ -275,11 +275,13 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
           messageIndex,
           sentiment: input.sentiment,
           feedback: input.feedback,
+          // The gate email, so the admin can see who left the feedback.
+          ...(email.trim() ? { email: email.trim() } : {}),
         }),
       });
       if (!resp.ok) throw new Error(`feedback failed: ${resp.status}`);
     },
-    [anonTranscript, signiture],
+    [anonTranscript, signiture, email],
   );
 
   // Example-card clicks dispatch drfuhrman:populateInput — pre-fill the
