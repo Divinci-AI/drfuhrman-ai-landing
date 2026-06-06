@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 export interface TranscriptMessage {
   id: string;
@@ -19,16 +19,33 @@ export interface TranscriptMessage {
   sources?: string[];
 }
 
-interface TranscriptProps {
-  messages: TranscriptMessage[];
+export interface TranscriptFeedbackInput {
+  sentiment?: -1 | 1;
+  feedback?: string;
 }
 
-export function Transcript({ messages }: TranscriptProps) {
+interface TranscriptProps {
+  messages: TranscriptMessage[];
+  /** Submit thumbs/feedback for the assistant reply at the given exchange index. */
+  onFeedback?: (messageIndex: number, input: TranscriptFeedbackInput) => Promise<void>;
+}
+
+export function Transcript({ messages, onFeedback }: TranscriptProps) {
   const endRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages]);
+
+  // Map each completed assistant reply to its index in the signed anonymous
+  // transcript (one entry per exchange) for feedback submission.
+  const exchangeIndexById = new Map<string, number>();
+  let seq = 0;
+  for (const m of messages) {
+    if (m.role === "assistant" && !m.pending && m.content) {
+      exchangeIndexById.set(m.id, seq++);
+    }
+  }
 
   return (
     <div
@@ -45,6 +62,8 @@ export function Transcript({ messages }: TranscriptProps) {
             content={m.content}
             pending={m.pending}
             sources={m.sources}
+            messageIndex={exchangeIndexById.get(m.id)}
+            onFeedback={onFeedback}
           />
         ),
       )}
@@ -82,10 +101,14 @@ function AssistantTurn({
   content,
   pending,
   sources,
+  messageIndex,
+  onFeedback,
 }: {
   content: string;
   pending?: boolean;
   sources?: string[];
+  messageIndex?: number;
+  onFeedback?: (messageIndex: number, input: TranscriptFeedbackInput) => Promise<void>;
 }) {
   return (
     <div className="flex flex-col gap-1.5">
@@ -113,6 +136,107 @@ function AssistantTurn({
           {pending && content && <BlinkingCursor />}
         </div>
       </div>
+      {content && !pending && onFeedback && messageIndex !== undefined && (
+        <MessageRating messageIndex={messageIndex} onFeedback={onFeedback} />
+      )}
+    </div>
+  );
+}
+
+function MessageRating({
+  messageIndex,
+  onFeedback,
+}: {
+  messageIndex: number;
+  onFeedback: (messageIndex: number, input: TranscriptFeedbackInput) => Promise<void>;
+}) {
+  const [vote, setVote] = useState<-1 | 1 | 0>(0);
+  const [showBox, setShowBox] = useState(false);
+  const [text, setText] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [done, setDone] = useState(false);
+
+  if (done) {
+    return <p className="pl-9 text-xs text-gray-500">Thanks for your feedback 🙏</p>;
+  }
+
+  const thumb = (on: boolean) =>
+    `rounded-md border px-1.5 py-0.5 text-sm transition ${
+      on
+        ? "border-df-green-dark bg-df-green-dark text-white"
+        : "border-df-green-dark/20 bg-white/70 text-gray-600 hover:border-df-green-dark/40"
+    }`;
+
+  return (
+    <div className="flex flex-wrap items-center gap-1.5 pl-9">
+      <button
+        type="button"
+        aria-label="Helpful"
+        className={thumb(vote === 1)}
+        onClick={() => {
+          // Positive votes are a server-side no-op for anonymous chat
+          // (negative-only); this is a local acknowledgement.
+          setVote(1);
+          setShowBox(false);
+        }}
+      >
+        👍
+      </button>
+      <button
+        type="button"
+        aria-label="Not helpful"
+        className={thumb(vote === -1)}
+        onClick={() => {
+          setVote(-1);
+          setShowBox(true);
+        }}
+      >
+        👎
+      </button>
+      {showBox && (
+        <form
+          className="mt-1 flex w-full flex-col gap-1.5"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            if (submitting) return;
+            setSubmitting(true);
+            try {
+              await onFeedback(messageIndex, {
+                sentiment: -1,
+                feedback: text.trim() || undefined,
+              });
+              setDone(true);
+            } catch {
+              setSubmitting(false);
+            }
+          }}
+        >
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            maxLength={2000}
+            rows={2}
+            placeholder="What was wrong? (optional)"
+            className="w-full rounded-lg border border-df-green-dark/15 bg-white px-3 py-2 text-sm text-df-text focus:border-df-green-dark/40 focus:outline-none"
+          />
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              disabled={submitting}
+              className="rounded-lg bg-df-green-dark px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60"
+            >
+              {submitting ? "Sending…" : "Send feedback"}
+            </button>
+            <button
+              type="button"
+              className="rounded-lg px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700"
+              onClick={() => setShowBox(false)}
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
     </div>
   );
 }

@@ -56,6 +56,10 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
   // configured or the upstream is unavailable.
   const [serverWelcome, setServerWelcome] = useState<string | null>(null);
   const [transcriptId, setTranscriptId] = useState<string | null>(null);
+  // The signed anonymous transcript from the latest /api/chat-send — held so a
+  // thumbs/feedback submission can prove authenticity to /api/chat-feedback.
+  const [anonTranscript, setAnonTranscript] = useState<unknown[]>([]);
+  const [signiture, setSigniture] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [chatStarted, setChatStarted] = useState(false);
@@ -205,7 +209,12 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
             response?: string;
             context?: Array<{ metadata?: { originalName?: string } }>;
           }>;
+          signiture?: string;
         };
+        // Hold the signed transcript so thumbs/feedback can authenticate to
+        // /api/chat-feedback (the worker forwards it to anonymous-feedback).
+        if (Array.isArray(data.transcript)) setAnonTranscript(data.transcript);
+        if (typeof data.signiture === "string") setSigniture(data.signiture);
         const lastMsg = data.transcript?.[data.transcript.length - 1];
         const reply = lastMsg?.response ?? "(no response)";
         // Deduped retrieved-source filenames → rendered as chips above the
@@ -247,6 +256,31 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
   useEffect(() => {
     handleSendRef.current = handleSend;
   }, [handleSend]);
+
+  // Thumbs/feedback for an assistant reply → /api/chat-feedback (worker proxy
+  // to Divinci's anonymous-feedback, authenticated by the held signed
+  // transcript). Throws on failure so the Transcript UI can surface a retry.
+  const handleFeedback = useCallback(
+    async (
+      messageIndex: number,
+      input: { sentiment?: -1 | 1; feedback?: string },
+    ) => {
+      if (!signiture) return;
+      const resp = await fetch("/api/chat-feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          transcript: anonTranscript,
+          signiture,
+          messageIndex,
+          sentiment: input.sentiment,
+          feedback: input.feedback,
+        }),
+      });
+      if (!resp.ok) throw new Error(`feedback failed: ${resp.status}`);
+    },
+    [anonTranscript, signiture],
+  );
 
   // Example-card clicks dispatch drfuhrman:populateInput — pre-fill the
   // draft and focus the textarea instead of auto-sending. The user then
@@ -324,7 +358,7 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
             </span>
           </div>
           <div className="px-4 py-5 md:px-6">
-            <Transcript messages={messages} />
+            <Transcript messages={messages} onFeedback={handleFeedback} />
           </div>
           <div className="border-t border-df-green-dark/10 bg-white/70 p-3 backdrop-blur-sm">
             {quotaExhausted ? (
