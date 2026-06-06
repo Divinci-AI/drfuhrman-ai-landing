@@ -5,6 +5,9 @@ export interface EscrowState {
   email: string | null;
   emailSkipped: boolean;
   transcriptId: string | null;
+  /** Stable per-visitor session id, sent with chat-send + feedback so the
+   *  server persists the whole conversation as one customer chat. */
+  sessionId: string | null;
   createdAt: string | null;
 }
 
@@ -13,6 +16,7 @@ const EMPTY: EscrowState = {
   email: null,
   emailSkipped: false,
   transcriptId: null,
+  sessionId: null,
   createdAt: null,
 };
 
@@ -27,6 +31,7 @@ export function loadEscrow(): EscrowState {
       email: parsed.email ?? null,
       emailSkipped: parsed.emailSkipped ?? false,
       transcriptId: parsed.transcriptId ?? null,
+      sessionId: parsed.sessionId ?? null,
       createdAt: parsed.createdAt ?? null,
     };
   } catch {

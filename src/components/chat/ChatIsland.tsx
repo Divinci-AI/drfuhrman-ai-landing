@@ -60,6 +60,12 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
   // thumbs/feedback submission can prove authenticity to /api/chat-feedback.
   const [anonTranscript, setAnonTranscript] = useState<unknown[]>([]);
   const [signiture, setSigniture] = useState<string | null>(null);
+  // Refs mirror the signed transcript + signature so the NEXT send reads the
+  // current rolling chain synchronously. The send callback's deps don't
+  // include these, so reading the state directly would capture a stale (often
+  // empty) transcript and break the upstream signature verification.
+  const anonTranscriptRef = useRef<unknown[]>([]);
+  const signitureRef = useRef<string | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [chatStarted, setChatStarted] = useState(false);
@@ -68,12 +74,30 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
 
   const handleSendRef = useRef<(text: string) => void>(() => {});
 
-  // Hydrate email + transcriptId from escrow once, on the client only (see
-  // the note on the email state above).
+  // Stable per-visitor session id (held in a ref so it's available
+  // synchronously in send/feedback without re-render churn). Restored from
+  // escrow, or minted lazily on the first send and persisted so the whole
+  // conversation maps to ONE server-side customer chat.
+  const sessionIdRef = useRef<string | null>(null);
+  const ensureSessionId = useCallback((): string => {
+    if (!sessionIdRef.current) {
+      const id =
+        typeof crypto !== "undefined" && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `s_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      sessionIdRef.current = id;
+      saveEscrow({ sessionId: id });
+    }
+    return sessionIdRef.current;
+  }, []);
+
+  // Hydrate email + transcriptId + sessionId from escrow once, on the client
+  // only (see the note on the email state above).
   useEffect(() => {
     const esc = loadEscrow();
     if (esc.email) setEmail(esc.email);
     if (esc.transcriptId) setTranscriptId(esc.transcriptId);
+    if (esc.sessionId) sessionIdRef.current = esc.sessionId;
   }, []);
 
   // Fetch the server-side welcome for this locale (worker proxies it to the
@@ -155,21 +179,29 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
       });
 
       try {
-        // /api/chat-send is the quota-gated proxy to Divinci's stateless
-        // anonymous-chat endpoint. Returns { transcript, signiture } or
-        // 402 if this email already used its free message.
+        // /api/chat-send is the quota-gated proxy to Divinci's anonymous-chat
+        // endpoint. We send the rolling signed transcript + its signature so
+        // the chat is MULTI-TURN (the assistant sees prior context) and the
+        // whole conversation persists server-side. Returns the appended
+        // { transcript, signiture }, or 402 if the free message was used.
         const resp = await fetch("/api/chat-send", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             email: email.trim(),
             newPrompt: content,
+            // Rolling signed conversation (empty/"" on the first turn).
+            transcript: anonTranscriptRef.current,
+            prevSigniture: signitureRef.current ?? "",
             // Mark starter sends so the worker draws on the separate
             // starter budget instead of the lifetime manual message.
             ...(isStarter ? { starter: true } : {}),
             // When the page is in a non-English locale, ask the
             // assistant to answer in that language. Omitted for English.
             ...(chatLanguage ? { language: chatLanguage } : {}),
+            // Stable session id → the server persists this conversation as
+            // one customer chat (analytics + feedback-conversation link).
+            sessionId: ensureSessionId(),
           }),
         });
 
@@ -212,8 +244,14 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
         };
         // Hold the signed transcript so thumbs/feedback can authenticate to
         // /api/chat-feedback (the worker forwards it to anonymous-feedback).
-        if (Array.isArray(data.transcript)) setAnonTranscript(data.transcript);
-        if (typeof data.signiture === "string") setSigniture(data.signiture);
+        if (Array.isArray(data.transcript)) {
+          setAnonTranscript(data.transcript);
+          anonTranscriptRef.current = data.transcript;
+        }
+        if (typeof data.signiture === "string") {
+          setSigniture(data.signiture);
+          signitureRef.current = data.signiture;
+        }
         const lastMsg = data.transcript?.[data.transcript.length - 1];
         const reply = lastMsg?.response ?? "(no response)";
         // Deduped retrieved-source filenames → rendered as chips above the
@@ -276,6 +314,9 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
           feedback: input.feedback,
           // The gate email, so the admin can see who left the feedback.
           ...(email.trim() ? { email: email.trim() } : {}),
+          // Same session id as chat-send → links the feedback to the
+          // persisted conversation.
+          sessionId: ensureSessionId(),
         }),
       });
       if (!resp.ok) throw new Error(`feedback failed: ${resp.status}`);
