@@ -16,6 +16,11 @@ export const SIGNUP_URL = withRef(
   "https://www.drfuhrman.com/membership",
   "free-message-quota-cta",
 );
+// Existing DrFuhrman.com members log in on their membership site.
+export const LOGIN_URL = withRef(
+  "https://www.drfuhrman.com/login",
+  "free-message-quota-cta",
+);
 
 let cached: DivinciClient | null = null;
 

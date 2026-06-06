@@ -5,7 +5,7 @@ import {
   type FormEvent,
   type KeyboardEvent,
 } from "react";
-import { SIGNUP_URL } from "../../lib/divinci";
+import { SIGNUP_URL, LOGIN_URL } from "../../lib/divinci";
 import { scrollToHeroChat } from "../../lib/scroll-to-hero";
 import { DEFAULT_LOCALE } from "../../i18n/locales";
 import { getUI } from "../../i18n";
@@ -34,7 +34,8 @@ export function StickyChatBar({
   pending,
   quotaExhausted,
 }: StickyChatBarProps) {
-  const t = getUI(lang).chat;
+  const ui = getUI(lang);
+  const t = ui.chat;
   // `visible` is driven by IntersectionObservers: the bar slides up once the
   // hero (which has its own input + the email gate) scrolls out of view, and
   // hides again as the footer approaches so it never overlaps it.
@@ -128,13 +129,21 @@ export function StickyChatBar({
               <p className="text-center text-sm font-medium text-df-text sm:text-left">
                 {t.quotaExhaustedNudge}
               </p>
-              <a
-                href={SIGNUP_URL}
-                className="inline-flex shrink-0 items-center gap-2 rounded-full bg-df-green-dark px-5 py-2 text-sm font-semibold text-white transition hover:bg-df-green-mid"
-              >
-                {t.signupButton}
-                <span aria-hidden="true">→</span>
-              </a>
+              <div className="flex shrink-0 items-center gap-2">
+                <a
+                  href={LOGIN_URL}
+                  className="inline-flex items-center rounded-full border border-df-green-dark/40 px-4 py-2 text-sm font-semibold text-df-green-dark transition hover:bg-df-green-dark/5"
+                >
+                  {ui.hero.memberLoginCta}
+                </a>
+                <a
+                  href={SIGNUP_URL}
+                  className="inline-flex items-center gap-2 rounded-full bg-df-green-dark px-5 py-2 text-sm font-semibold text-white transition hover:bg-df-green-mid"
+                >
+                  {t.signupButton}
+                  <span aria-hidden="true">→</span>
+                </a>
+              </div>
             </div>
           ) : (
             <form onSubmit={submit} className="flex items-center gap-2">
