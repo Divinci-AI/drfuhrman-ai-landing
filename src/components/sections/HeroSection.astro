@@ -59,6 +59,16 @@ const t = getUI(lang).hero;
          with no visible padding rectangle. All the frosted-orb styling is
          applied only at md+ below. */
       .chat-glass {
+        /* Position in the scoped CSS — NOT via Tailwind `absolute inset-0`
+           on the element. Astro scopes component styles with
+           `:where([data-astro-cid])` (zero added specificity), so a
+           `.chat-glass` rule ties with Tailwind's `.inset-0` utility and the
+           later-loaded utility wins — pinning all four insets and defeating
+           the md+ circle decoupling below (the orb fills the wrapper box and
+           goes oval when the content is wide-and-short, e.g. the 402 CTA).
+           Owning position here removes that competition entirely. */
+        position: absolute;
+        inset: 0;
         margin-top: 0;
         border-radius: 1.5rem;
         background: transparent;
@@ -405,7 +415,7 @@ const t = getUI(lang).hero;
     </div>
 
     <div class="chat-panel-wrapper relative mt-8 w-full md:mt-[3.875rem]">
-      <div class="chat-glass absolute inset-0"></div>
+      <div class="chat-glass"></div>
       <div class="relative z-10 mt-2 md:mt-[75px]">
         <ChatIsland client:load lang={lang} />
       </div>
