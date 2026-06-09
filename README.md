@@ -20,10 +20,48 @@ Built with [Astro](https://astro.build) + React islands and deployed to
 
 ## Local development
 
+This project is **two things at once**: an Astro static site (pages + React
+islands) and a Cloudflare **Worker** (`src/worker.ts`) that owns every `/api/*`
+route — `welcome`, `chat-send`, `chat-feedback`, `verify-email`, and the admin
+quota-reset. `astro dev` serves the site but **does not run the Worker**, so
+under it alone the `/api/*` routes return **404**. To exercise the chat locally
+you run the Worker with `wrangler dev` and supply its secrets via `.dev.vars`.
+
+### 1. Local secrets — `.dev.vars`
+
+`wrangler dev` reads `.dev.vars` (gitignored) for the Worker's secrets. The one
+that matters for chat is `LANDING_PAGE_HMAC_KEY`: the Worker HMAC-signs every
+upstream `/ai-chat/anonymous-chat` call with it, and the Divinci API rejects the
+call without a matching signature. Use the **same value as the target env's
+worker secret** (the default `DIVINCI_API_BASE` points at staging, so use the
+staging key). Omit `BASIC_AUTH_PASSWORD` to disable the preview gate locally.
+
 ```bash
-npm install
-npm run dev        # astro dev server
+# .dev.vars  — do NOT commit (it's gitignored)
+LANDING_PAGE_HMAC_KEY=<same value as the target env's worker secret>
 ```
+
+Non-secret vars (`DIVINCI_API_BASE`, `DIVINCI_RELEASE_ID`) come from
+`wrangler.toml` and point at **staging** by default — so local chat talks to the
+staging backend.
+
+### 2. Run it
+
+```bash
+pnpm install
+
+# Option A — full DX: UI hot-reload AND a working chat (two terminals)
+pnpm dev:worker    # terminal 1 → real Worker on http://localhost:8787
+pnpm dev           # terminal 2 → Astro UI on http://localhost:4321
+#                    vite proxies /api → :8787; open http://localhost:4321
+
+# Option B — simplest: everything on one port, no hot-reload
+pnpm dev:worker    # → http://localhost:8787 (Worker serves built assets + /api)
+```
+
+`pnpm dev` alone (`astro dev`, port 4321) is fine for pure UI/markup work, but
+its `/api/*` calls will **404** until `pnpm dev:worker` is also running. If you
+see `404` on `/api/welcome` or `/api/chat-send`, the Worker isn't running.
 
 ## Build & preview
 
@@ -69,9 +107,32 @@ gracefully — see the header comment in `src/worker.ts`):
 | `BASIC_AUTH_USERNAME` | Optional; defaults to `dfo`. |
 | `RESEND_API_KEY` | Resend API key for magic-link verification emails. |
 | `VERIFY_TOKEN_SECRET` | HMAC key for signing email-verification tokens (`openssl rand -hex 32`). |
-| `LANDING_PAGE_HMAC_KEY` | Shared HMAC key for signing upstream chat API calls. |
+| `LANDING_PAGE_HMAC_KEY` | Shared HMAC key for signing upstream chat API calls. Also goes in `.dev.vars` for local chat. |
 | `VERIFY_EMAIL_FROM` / `VERIFY_EMAIL_FROM_NAME` | Optional sender identity for verification emails. |
 | `PUBLIC_BASE_URL` | Public origin used to build verification links. |
+| `ADMIN_RESET_TOKEN` | Bearer token for `POST /api/admin/reset-quota` (support tooling). Unset = endpoint disabled (404). |
+
+### Resetting a free-message quota
+
+Each visitor gets one free manual message (plus a small starter budget), keyed
+by a hash of their email in KV + a Durable Object. To clear a specific email's
+quota (e.g. for testing), `POST /api/admin/reset-quota` with the bearer token.
+The route sits **before** the Basic-Auth gate, so it needs only the token:
+
+```bash
+TOKEN=$(cat .admin-reset-token)   # the token value, also set via `wrangler secret put ADMIN_RESET_TOKEN`
+# staging
+curl -X POST https://drfuhrman-ai-landing-staging.divinci-ai.workers.dev/api/admin/reset-quota \
+  -H "Authorization: Bearer $TOKEN" -d '{"email":"you@example.com"}'
+# production
+curl -X POST https://drfuhrman-ai-landing.divinci-ai.workers.dev/api/admin/reset-quota \
+  -H "Authorization: Bearer $TOKEN" -d '{"email":"you@example.com"}'
+```
+
+Set the token per env with `wrangler secret put ADMIN_RESET_TOKEN`
+(staging: `--env staging`). Note `wrangler secret put` keeps a trailing
+newline if piped via `< file`; pipe with `printf %s "$(cat file)" | wrangler …`
+to avoid a token mismatch.
 
 ## Project layout
 
