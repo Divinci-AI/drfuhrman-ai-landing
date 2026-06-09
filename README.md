@@ -63,6 +63,14 @@ pnpm dev:worker    # → http://localhost:8787 (Worker serves built assets + /ap
 its `/api/*` calls will **404** until `pnpm dev:worker` is also running. If you
 see `404` on `/api/welcome` or `/api/chat-send`, the Worker isn't running.
 
+The Worker port is pinned to **8787** (`[dev]` in `wrangler.toml`) to match the
+vite `/api` proxy. If wrangler says 8787 is taken and drifts to another port,
+the proxy breaks silently — free 8787 (kill the stale `wrangler dev`) instead.
+The Worker also rewrites the upstream `Origin` for `localhost` requests (to an
+allowlisted origin), so the staging API's CORS allowlist doesn't need your local
+port — a `502 {"error":"upstream_error"}` with *"Origin ... not allowed by
+CORS"* in the wrangler log means you're on an old Worker build; restart it.
+
 ### 3. Resetting the local free-message quota
 
 Each email gets **one** free manual message, tracked in `wrangler dev`'s local

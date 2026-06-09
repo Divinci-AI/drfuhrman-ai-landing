@@ -3,6 +3,13 @@ main = "./src/worker.ts"
 compatibility_date = "2026-05-28"
 compatibility_flags = ["nodejs_compat"]
 
+# Pin the local `wrangler dev` port so it matches the vite /api proxy in
+# astro.config.mjs (which targets :8787). If wrangler reports 8787 is taken,
+# free it (usually a stale `wrangler dev`) rather than letting the port drift —
+# a mismatched port silently breaks the astro-dev /api proxy.
+[dev]
+port = 8787
+
 [assets]
 directory = "./dist"
 not_found_handling = "single-page-application"
