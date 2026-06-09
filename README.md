@@ -63,6 +63,27 @@ pnpm dev:worker    # → http://localhost:8787 (Worker serves built assets + /ap
 its `/api/*` calls will **404** until `pnpm dev:worker` is also running. If you
 see `404` on `/api/welcome` or `/api/chat-send`, the Worker isn't running.
 
+### 3. Resetting the local free-message quota
+
+Each email gets **one** free manual message, tracked in `wrangler dev`'s local
+KV + Durable Object state. Once you've used it, `chat-send` returns **402
+`quota_exhausted`** (that's the Worker's own gate, *before* any upstream call —
+nothing to do with the HMAC key). Two ways to clear it locally:
+
+```bash
+# A. Targeted — reset one email (needs ADMIN_RESET_TOKEN in .dev.vars;
+#    restart pnpm dev:worker after adding it):
+curl -X POST http://localhost:8787/api/admin/reset-quota \
+  -H "Authorization: Bearer $(cat .admin-reset-token)" \
+  -d '{"email":"you@example.com"}'
+
+# B. Fresh slate — wipe ALL local quota state, then restart:
+rm -rf .wrangler/state
+pnpm dev:worker
+```
+
+This is purely local simulated state — it never touches staging or prod.
+
 ## Build & preview
 
 ```bash
