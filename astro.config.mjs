@@ -26,5 +26,18 @@ export default defineConfig({
   },
   vite: {
     plugins: [tailwindcss()],
+    server: {
+      // `astro dev` (port 4321) serves pages + React islands but NEVER runs the
+      // Cloudflare Worker (src/worker.ts), so the /api/* routes — welcome,
+      // chat-send, chat-feedback — 404 under it. Proxy them to a local
+      // `wrangler dev` (port 8787) which runs the actual worker with the
+      // .dev.vars secrets. Dev flow: `pnpm dev:worker` in one terminal +
+      // `pnpm dev` in another, then develop on :4321 with hot-reload AND a
+      // working chat. (Plain `pnpm dev:worker` alone on :8787 also works, just
+      // without UI hot-reload.)
+      proxy: {
+        "/api": "http://localhost:8787",
+      },
+    },
   },
 });
