@@ -20,6 +20,19 @@ landing_page_sig_invalid` means the key doesn't match the API's — and pasting 
 `divinci_…` API key into the HMAC slot will always 403, because it's the wrong
 kind of credential.
 
+### Conversation persistence
+
+The chat island mints a stable per-visitor `sessionId`
+(`crypto.randomUUID()`, kept in localStorage escrow) and sends it with every
+chat-send and feedback call. The Divinci API persists the conversation under
+that id as a customer chat — used for usage analytics and for linking a
+feedback report to its full conversation. The visitor's **email is never
+stored on the persisted chat** (it appears only on feedback notifications).
+Session ids are validated end-to-end (8–128 chars of `[A-Za-z0-9_-]`, clamped
+in the Worker and re-validated server-side) and persistence is append-only —
+a page reload that restarts the client's signed chain can't overwrite the
+stored history.
+
 ## Tech stack
 
 - **Astro 5** static site, **React 19** islands for the interactive chat
@@ -150,7 +163,7 @@ gracefully — see the header comment in `src/worker.ts`):
 | --- | --- |
 | `BASIC_AUTH_PASSWORD` | Gates the preview/staging build. Unset = gate disabled. |
 | `BASIC_AUTH_USERNAME` | Optional; defaults to `dfo`. |
-| `RESEND_API_KEY` | Resend API key for magic-link verification emails. |
+| `RESEND_API_KEY` | **Dormant** — Resend key for magic-link verification emails. Not set on staging or prod, so verification emails are OFF (the code guards on it and no-ops). Slated for replacement by the Divinci platform's free-chat gate (Cloudflare Email Service) — see `src/worker-v2.ts` header. |
 | `VERIFY_TOKEN_SECRET` | HMAC key for signing email-verification tokens (`openssl rand -hex 32`). |
 | `LANDING_PAGE_HMAC_KEY` | Shared HMAC key for signing upstream chat API calls. Also goes in `.dev.vars` for local chat. |
 | `VERIFY_EMAIL_FROM` / `VERIFY_EMAIL_FROM_NAME` | Optional sender identity for verification emails. |
