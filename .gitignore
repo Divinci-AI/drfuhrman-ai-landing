@@ -36,3 +36,7 @@ playwright/.cache/
 # single lockfile: npm (package-lock.json)
 pnpm-lock.yaml
 yarn.lock
+.admin-reset-token
+
+# env files (none tracked today — future-proofing)
+*.env

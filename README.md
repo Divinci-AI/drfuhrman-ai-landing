@@ -4,6 +4,22 @@ Marketing landing page for **DrFuhrman.ai** with an embedded AI chat island.
 Built with [Astro](https://astro.build) + React islands and deployed to
 **Cloudflare Workers** (Static Assets + a small API worker).
 
+This repo is the reference implementation for the Divinci SDK's
+[**Deploy to Cloudflare Workers**](https://sdk.divinci.ai/guides/cloudflare-workers/)
+guide — a gated, anonymous landing-page chat backed by a Divinci Release.
+
+### How the chat authenticates
+
+The chat is **anonymous** — there's no Divinci API key or user token anywhere in
+this repo, and there's no slot for one. The Worker authenticates each upstream
+call to the Divinci API with a **landing-page HMAC**: it signs
+`${ts}.${releaseId}.${newPrompt}` with `LANDING_PAGE_HMAC_KEY` and sends
+`X-Landing-Page-Ts` / `X-Landing-Page-Sig`. The API (with the Release's
+`requireSignedAnonymousChat` on) verifies the signature. A `403
+landing_page_sig_invalid` means the key doesn't match the API's — and pasting a
+`divinci_…` API key into the HMAC slot will always 403, because it's the wrong
+kind of credential.
+
 ## Tech stack
 
 - **Astro 5** static site, **React 19** islands for the interactive chat
