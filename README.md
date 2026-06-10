@@ -153,54 +153,45 @@ npm run deploy:prod      # astro build && wrangler deploy
 Bindings (KV namespace, Durable Object) and non-secret vars live in
 `wrangler.toml`.
 
-### Deploying to your own Cloudflare account (forks / handoff)
+### Environments & multi-account deploys (handoff)
 
-The KV namespace `id`s in `wrangler.toml` point at **specific resources in a
-specific Cloudflare account**. Deploying into a *different* account (a fork, or
-a new owner) fails with:
+KV namespace `id`s are **Cloudflare-account-scoped** — an id from one account
+doesn't exist in another, and deploying it elsewhere fails with
+`KV namespace '<id>' not found [code: 10041]`. Rather than rewrite the file per
+deploy, each account gets its **own named environment** in `wrangler.toml`, so
+the one committed file is the source of truth for all of them:
 
-```
-KV namespace '<id>' not found … [code: 10041]
-```
+| Env | Command | Account / worker | KV id |
+| --- | --- | --- | --- |
+| base | `wrangler deploy` | Divinci · `drfuhrman-ai-landing` | Divinci |
+| staging | `wrangler deploy --env staging` | Divinci · `…-staging` | Divinci |
+| production | `wrangler deploy --env production` | **DrFuhrman** · `drfuhrman-ai-landing` | DrFuhrman |
 
-— because that id doesn't exist in your account. KV ids are account-scoped;
-recreate them in yours:
+Each `wrangler deploy --env <x>` reads only that env's block and deploys to
+whatever account it's authenticated against, so there's **nothing to edit before
+a deploy** — a CI job (or a repo-to-repo sync) just runs the right
+`--env`. Divinci owns base + staging; the DrFuhrman team owns production.
 
-1. **Create your KV namespace(s)** (run from the repo root, logged into your
-   account — `wrangler login`):
+**One-time setup for a new account's environment** (e.g. the DrFuhrman
+production env — do this once, then never touch the file again):
 
+1. Create that account's KV namespace (logged into it via `wrangler login`):
    ```bash
-   wrangler kv namespace create EMAIL_QUOTA              # production
-   wrangler kv namespace create EMAIL_QUOTA --env staging   # staging
+   wrangler kv namespace create EMAIL_QUOTA --env production
    ```
-
-   Each prints a new `id`.
-
-2. **Replace the ids in `wrangler.toml`** — `[[kv_namespaces]].id` (production)
-   and `[[env.staging.kv_namespaces]].id` (staging) — with the printed values.
-
-3. **The Durable Object is automatic.** `EmailQuotaCoordinator` is created by
-   the `[[migrations]]` block on your first `wrangler deploy` — nothing to
-   pre-create.
-
-4. **Set your secrets** (see [Secrets](#secrets)) — at minimum
-   `LANDING_PAGE_HMAC_KEY`:
-
+2. Paste the printed `id` into the `[[env.production.kv_namespaces]]` block.
+3. Set its secrets — at minimum `LANDING_PAGE_HMAC_KEY`:
    ```bash
-   wrangler secret put LANDING_PAGE_HMAC_KEY              # and --env staging
+   wrangler secret put LANDING_PAGE_HMAC_KEY --env production
    ```
+4. The Durable Object (`EmailQuotaCoordinator`) is auto-created by the
+   `[[migrations]]` block on first deploy — nothing to pre-create.
 
-5. **Coordinate the Divinci API side** (ask the Divinci team) — the chat won't
-   work end-to-end until:
-   - `LANDING_PAGE_HMAC_KEY` **matches** the value the Divinci API verifies for
-     this `DIVINCI_RELEASE_ID` (else `403 landing_page_sig_invalid`), and
-   - your deployed Worker's **origin is on the API's CORS allowlist** (else
-     `502 upstream_error` with *"Origin … not allowed by CORS"*), and
-   - the Release permits anonymous chat.
-
-> Tip: if you use Cloudflare's automatic Git builds, the build reads the
-> committed `wrangler.toml`, so the ids must be your account's on the branch the
-> build watches (i.e. commit step 2 to your fork/branch).
+**Divinci-API-side coordination** (ask the Divinci team) — the chat won't work
+end-to-end until: `LANDING_PAGE_HMAC_KEY` **matches** the value the API verifies
+for that env's `DIVINCI_RELEASE_ID` (else `403 landing_page_sig_invalid`); the
+deployed Worker's **origin is on the API's CORS allowlist** (else `502
+upstream_error`); and the Release permits anonymous chat.
 
 ### Secrets
 
