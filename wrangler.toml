@@ -16,6 +16,11 @@ not_found_handling = "single-page-application"
 binding = "ASSETS"
 run_worker_first = true
 
+# NOTE: KV ids are Cloudflare-account-scoped. These belong to the account that
+# currently hosts the site. Deploying into a DIFFERENT account fails with
+# "KV namespace '<id>' not found [code: 10041]" — recreate with
+# `wrangler kv namespace create EMAIL_QUOTA` and replace the id (and the staging
+# one below). See "Deploying to your own Cloudflare account" in README.md.
 [[kv_namespaces]]
 binding = "EMAIL_QUOTA"
 id = "f4b81233948d4ce18fc97e9a01e1b480"

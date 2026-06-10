@@ -153,6 +153,55 @@ npm run deploy:prod      # astro build && wrangler deploy
 Bindings (KV namespace, Durable Object) and non-secret vars live in
 `wrangler.toml`.
 
+### Deploying to your own Cloudflare account (forks / handoff)
+
+The KV namespace `id`s in `wrangler.toml` point at **specific resources in a
+specific Cloudflare account**. Deploying into a *different* account (a fork, or
+a new owner) fails with:
+
+```
+KV namespace '<id>' not found … [code: 10041]
+```
+
+— because that id doesn't exist in your account. KV ids are account-scoped;
+recreate them in yours:
+
+1. **Create your KV namespace(s)** (run from the repo root, logged into your
+   account — `wrangler login`):
+
+   ```bash
+   wrangler kv namespace create EMAIL_QUOTA              # production
+   wrangler kv namespace create EMAIL_QUOTA --env staging   # staging
+   ```
+
+   Each prints a new `id`.
+
+2. **Replace the ids in `wrangler.toml`** — `[[kv_namespaces]].id` (production)
+   and `[[env.staging.kv_namespaces]].id` (staging) — with the printed values.
+
+3. **The Durable Object is automatic.** `EmailQuotaCoordinator` is created by
+   the `[[migrations]]` block on your first `wrangler deploy` — nothing to
+   pre-create.
+
+4. **Set your secrets** (see [Secrets](#secrets)) — at minimum
+   `LANDING_PAGE_HMAC_KEY`:
+
+   ```bash
+   wrangler secret put LANDING_PAGE_HMAC_KEY              # and --env staging
+   ```
+
+5. **Coordinate the Divinci API side** (ask the Divinci team) — the chat won't
+   work end-to-end until:
+   - `LANDING_PAGE_HMAC_KEY` **matches** the value the Divinci API verifies for
+     this `DIVINCI_RELEASE_ID` (else `403 landing_page_sig_invalid`), and
+   - your deployed Worker's **origin is on the API's CORS allowlist** (else
+     `502 upstream_error` with *"Origin … not allowed by CORS"*), and
+   - the Release permits anonymous chat.
+
+> Tip: if you use Cloudflare's automatic Git builds, the build reads the
+> committed `wrangler.toml`, so the ids must be your account's on the branch the
+> build watches (i.e. commit step 2 to your fork/branch).
+
 ### Secrets
 
 These are **not** stored in the repo. Set them per environment with
