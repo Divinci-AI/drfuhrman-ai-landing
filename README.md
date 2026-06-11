@@ -95,10 +95,10 @@ see `404` on `/api/welcome` or `/api/chat-send`, the Worker isn't running.
 The Worker port is pinned to **8787** (`[dev]` in `wrangler.toml`) to match the
 vite `/api` proxy. If wrangler says 8787 is taken and drifts to another port,
 the proxy breaks silently — free 8787 (kill the stale `wrangler dev`) instead.
-The Worker also rewrites the upstream `Origin` for `localhost` requests (to an
-allowlisted origin), so the staging API's CORS allowlist doesn't need your local
-port — a `502 {"error":"upstream_error"}` with *"Origin ... not allowed by
-CORS"* in the wrangler log means you're on an old Worker build; restart it.
+
+The Worker calls the Divinci API **server-to-server with no `Origin` header**,
+so CORS never applies — local dev, any port, and any deployed domain all work
+without allowlisting. (The HMAC signature is the gate, not the origin.)
 
 ### 3. Resetting the local free-message quota
 
@@ -188,10 +188,11 @@ production env — do this once, then never touch the file again):
    `[[migrations]]` block on first deploy — nothing to pre-create.
 
 **Divinci-API-side coordination** (ask the Divinci team) — the chat won't work
-end-to-end until: `LANDING_PAGE_HMAC_KEY` **matches** the value the API verifies
-for that env's `DIVINCI_RELEASE_ID` (else `403 landing_page_sig_invalid`); the
-deployed Worker's **origin is on the API's CORS allowlist** (else `502
-upstream_error`); and the Release permits anonymous chat.
+end-to-end until `LANDING_PAGE_HMAC_KEY` **matches** the value the API verifies
+for that env's `DIVINCI_RELEASE_ID` (else `403 landing_page_sig_invalid`), and
+the Release permits anonymous chat. No CORS / origin allowlisting is needed —
+the Worker calls the API server-to-server with no `Origin` header, so any domain
+works out of the box.
 
 ### Secrets
 
@@ -209,6 +210,38 @@ gracefully — see the header comment in `src/worker.ts`):
 | `VERIFY_EMAIL_FROM` / `VERIFY_EMAIL_FROM_NAME` | Optional sender identity for verification emails. |
 | `PUBLIC_BASE_URL` | Public origin used to build verification links. |
 | `ADMIN_RESET_TOKEN` | Bearer token for `POST /api/admin/reset-quota` (support tooling). Unset = endpoint disabled (404). |
+
+### The `LANDING_PAGE_HMAC_KEY` (generating + placing it)
+
+This is the **single most important secret** — without a matching value the
+Divinci API rejects every chat with `403 landing_page_sig_invalid`. It's a
+**shared secret**: the Worker signs each upstream call with it, and the Divinci
+API verifies the signature with the *same* value for that release. Both sides
+must hold the **identical string**.
+
+**It is shared, not per-deployment.** A new customer/environment does **not**
+generate its own key — you use the value the Divinci team already configured for
+the API environment you point at (`DIVINCI_API_BASE`). Generating a fresh one is
+only for **standing up a new API environment or rotating** the existing key, and
+must be done in lockstep on both sides.
+
+1. **Generate** (only when creating/rotating the shared key — 32 random bytes as
+   hex):
+   ```bash
+   openssl rand -hex 32
+   ```
+2. **Place it on the Divinci API side** (Divinci team) — store that value in the
+   API's secret manager (Infisical) as `LANDING_PAGE_HMAC_KEY` for the matching
+   environment, so the API verifies against it.
+3. **Place it on the Worker side** (this repo) — as a Wrangler secret per
+   environment, and in `.dev.vars` for local dev:
+   ```bash
+   wrangler secret put LANDING_PAGE_HMAC_KEY --env production   # (and --env staging)
+   echo 'LANDING_PAGE_HMAC_KEY=<same value>' >> .dev.vars       # local only, gitignored
+   ```
+
+If you're a customer standing up your own environment, **ask the Divinci team
+for the value** for the API you're pointing at — don't invent one.
 
 ### Resetting a free-message quota
 
