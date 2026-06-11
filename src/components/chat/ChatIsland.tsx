@@ -239,6 +239,11 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
             prompt?: string;
             response?: string;
             context?: Array<{ metadata?: { originalName?: string } }>;
+            safetyAdvisory?: {
+              severity: "review" | "severe";
+              text: string;
+              categories?: string[];
+            };
           }>;
           signiture?: string;
         };
@@ -263,11 +268,18 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
               .filter((n): n is string => typeof n === "string" && n.length > 0),
           ),
         );
+        // Medical-safety advisory (server-side medicalSafety check). Carried
+        // verbatim from the signed payload → rendered as an amber banner
+        // under the reply bubble.
+        const safetyAdvisory =
+          lastMsg?.safetyAdvisory && typeof lastMsg.safetyAdvisory.text === "string"
+            ? lastMsg.safetyAdvisory
+            : undefined;
 
         setMessages((prev) =>
           prev.map((m) =>
             m.id === assistantPlaceholder.id
-              ? { ...m, content: reply, sources, pending: false }
+              ? { ...m, content: reply, sources, safetyAdvisory, pending: false }
               : m,
           ),
         );

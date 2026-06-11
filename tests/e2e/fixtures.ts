@@ -15,13 +15,22 @@ import { test as base, type Page } from "@playwright/test";
 export interface MockChatOptions {
   reply?: string;
   delayMs?: number;
+  /**
+   * Optional medical-safety advisory attached to the assistant turn,
+   * mirroring the server-side medicalSafety check payload.
+   */
+  safetyAdvisory?: {
+    severity: "review" | "severe";
+    text: string;
+    categories?: string[];
+  };
 }
 
 export async function mockChatSendOk(
   page: Page,
   options: MockChatOptions = {},
 ) {
-  const { reply = "Synthetic AI reply from mock.", delayMs = 0 } = options;
+  const { reply = "Synthetic AI reply from mock.", delayMs = 0, safetyAdvisory } = options;
   await page.route("**/api/chat-send", async (route) => {
     if (delayMs) await new Promise((r) => setTimeout(r, delayMs));
     const body = JSON.parse(route.request().postData() ?? "{}") as {
@@ -38,6 +47,7 @@ export async function mockChatSendOk(
             response: reply,
             responseTimestamp: Date.now(),
             context: [],
+            ...(safetyAdvisory ? { safetyAdvisory } : {}),
           },
         ],
         signiture: "mock-signature",

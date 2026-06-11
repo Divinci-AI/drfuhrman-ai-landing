@@ -17,6 +17,21 @@ export interface TranscriptMessage {
    * mirroring the static TranscriptShowcase.
    */
   sources?: string[];
+  /**
+   * Medical-safety advisory attached server-side when the release's
+   * medicalSafety check flagged the reply (severity "severe" means the
+   * server already rewrote the offending passage to a physician referral;
+   * "review" means the LLM judge confirmed the topic warrants the notice).
+   * Rendered as an amber banner under the reply bubble. The text comes
+   * from the signed payload verbatim — never alter it client-side.
+   */
+  safetyAdvisory?: SafetyAdvisory;
+}
+
+export interface SafetyAdvisory {
+  severity: "review" | "severe";
+  text: string;
+  categories?: string[];
 }
 
 export interface TranscriptFeedbackInput {
@@ -62,6 +77,7 @@ export function Transcript({ messages, onFeedback }: TranscriptProps) {
             content={m.content}
             pending={m.pending}
             sources={m.sources}
+            safetyAdvisory={m.safetyAdvisory}
             messageIndex={exchangeIndexById.get(m.id)}
             onFeedback={onFeedback}
           />
@@ -101,12 +117,14 @@ function AssistantTurn({
   content,
   pending,
   sources,
+  safetyAdvisory,
   messageIndex,
   onFeedback,
 }: {
   content: string;
   pending?: boolean;
   sources?: string[];
+  safetyAdvisory?: SafetyAdvisory;
   messageIndex?: number;
   onFeedback?: (messageIndex: number, input: TranscriptFeedbackInput) => Promise<void>;
 }) {
@@ -136,6 +154,16 @@ function AssistantTurn({
           {pending && content && <BlinkingCursor />}
         </div>
       </div>
+      {safetyAdvisory && content && !pending && (
+        <div
+          role="alert"
+          data-testid="safety-advisory"
+          className="ml-9 flex max-w-[88%] items-start gap-2 rounded-lg border-l-4 border-amber-400 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-gray-700 md:text-sm"
+        >
+          <span aria-hidden="true" className="mt-0.5">⚕️</span>
+          <span>{safetyAdvisory.text}</span>
+        </div>
+      )}
       {content && !pending && onFeedback && messageIndex !== undefined && (
         <MessageRating messageIndex={messageIndex} onFeedback={onFeedback} />
       )}
