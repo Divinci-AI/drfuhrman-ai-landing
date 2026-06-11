@@ -86,7 +86,8 @@ run_worker_first = true
 
 [[env.production.kv_namespaces]]
 binding = "EMAIL_QUOTA"
-id = "REPLACE_WITH_DRFUHRMAN_ACCOUNT_KV_ID"
+# DrFuhrman account's EMAIL_QUOTA namespace (provided by the DrFuhrman team).
+id = "e8fd0b02778f43c0b1cfaa5fe7fb77ec"
 
 [[env.production.durable_objects.bindings]]
 name = "QUOTA_DO"
