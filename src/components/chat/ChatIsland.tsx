@@ -55,6 +55,9 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
   // welcome (t.welcomeMessage) — resilient if the release has no welcome
   // configured or the upstream is unavailable.
   const [serverWelcome, setServerWelcome] = useState<string | null>(null);
+  // The Release's uploaded avatar (whitelabel picture) — replaces the static
+  // placeholder logo everywhere end-users see the assistant.
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [transcriptId, setTranscriptId] = useState<string | null>(null);
   // The signed anonymous transcript from the latest /api/chat-send — held so a
   // thumbs/feedback submission can prove authenticity to /api/chat-feedback.
@@ -134,6 +137,16 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
       cancelled = true;
     };
   }, [chatLanguage]);
+
+  // Release avatar — cached briefly at the edge; null keeps the fallback logo.
+  useEffect(() => {
+    fetch("/api/release-meta")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { avatarUrl?: string | null } | null) => {
+        if (d && typeof d.avatarUrl === "string") setAvatarUrl(d.avatarUrl);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!chatStarted) return;
@@ -437,6 +450,13 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
   // after which the input swaps to the sign-up / log-in CTA.
   const userMessageCount = messages.filter((m) => m.role === "user").length;
   const quotaExhausted = userMessageCount >= FREE_MESSAGE_QUOTA && !pending;
+  // Medical-safety advisory: pinned at the bottom of the chat card (always
+  // visible, not buried in the scrollback). Shows the most recent advisory
+  // the server attached to any completed reply in this conversation.
+  const latestAdvisory = [...messages]
+    .reverse()
+    .find((m) => m.role === "assistant" && !m.pending && m.content && m.safetyAdvisory)
+    ?.safetyAdvisory;
 
   return (
     <>
@@ -471,14 +491,11 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
         <div className="df-active-card overflow-hidden rounded-3xl border border-df-green-dark/15 bg-gradient-to-b from-df-green-leaf/10 to-white shadow-lg ring-1 ring-black/5">
           <div className="flex items-center gap-2 border-b border-df-green-dark/10 bg-white/70 px-5 py-3 backdrop-blur-sm">
             <span className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-df-green-leaf/20 ring-1 ring-df-green-dark/15">
-              <img
-                src="/drfuhrman-logo.svg"
-                alt=""
-                aria-hidden="true"
-                className="h-4 w-4"
-                width={16}
-                height={16}
-              />
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="" aria-hidden="true" className="h-full w-full object-cover" />
+              ) : (
+                <img src="/drfuhrman-logo.svg" alt="" aria-hidden="true" className="h-4 w-4" width={16} height={16} />
+              )}
             </span>
             <span className="font-semibold text-df-green-dark">Dr. Fuhrman AI</span>
             <span className="ml-auto inline-flex items-center gap-1.5 text-xs text-gray-500">
@@ -490,8 +507,18 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
             </span>
           </div>
           <div className="px-4 py-5 md:px-6">
-            <Transcript messages={messages} onFeedback={handleFeedback} />
+            <Transcript messages={messages} onFeedback={handleFeedback} avatarUrl={avatarUrl} />
           </div>
+          {latestAdvisory && (
+            <div
+              role="alert"
+              data-testid="safety-advisory"
+              className="flex items-start gap-2 border-t border-amber-200 border-l-4 border-l-amber-400 bg-amber-50 px-4 py-2.5 text-xs leading-relaxed text-gray-700 md:px-6 md:text-sm"
+            >
+              <span aria-hidden="true" className="mt-0.5">⚕️</span>
+              <span>{latestAdvisory.text}</span>
+            </div>
+          )}
           <div className="border-t border-df-green-dark/10 bg-white/70 p-3 backdrop-blur-sm">
             {quotaExhausted ? (
               <SignupCTA lang={lang} />

@@ -19,6 +19,7 @@
  * model string stay in English here.
  */
 import { getUI } from "~/i18n";
+import { cleanContextTitle } from "~/lib/clean-context-title";
 import { DEFAULT_LOCALE } from "~/i18n/locales";
 
 interface Props {
@@ -119,7 +120,8 @@ const ASSISTANT_MODEL = "Fuhrman v8 (Embedding-2) + Gemini 3.5 Flash";
 
 // Resolve a citation number to its source ("context") title for the tooltip.
 function citeTitle(ex: Exchange, n: number): string {
-  return ex.sources[n - 1] ?? ex.sources[ex.sources.length - 1] ?? "Dr. Fuhrman's corpus";
+  const raw = ex.sources[n - 1] ?? ex.sources[ex.sources.length - 1];
+  return raw ? cleanContextTitle(raw) : "Dr. Fuhrman's corpus";
 }
 ---
 
@@ -184,7 +186,7 @@ function citeTitle(ex: Exchange, n: number): string {
                 {ex.sources.map((s) => (
                   <span class="inline-flex max-w-full items-center gap-1 rounded-md border border-df-green-dark/15 bg-white/80 px-2 py-1 text-xs text-gray-600">
                     <span aria-hidden="true">{sourceIcon(s)}</span>
-                    <span class="truncate">{s}</span>
+                    <span class="truncate">{cleanContextTitle(s)}</span>
                   </span>
                 ))}
               </div>

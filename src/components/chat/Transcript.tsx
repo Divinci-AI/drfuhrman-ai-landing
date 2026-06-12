@@ -1,3 +1,4 @@
+import { cleanContextTitle } from "../../lib/clean-context-title";
 import {
   useCallback,
   useEffect,
@@ -50,9 +51,11 @@ interface TranscriptProps {
   messages: TranscriptMessage[];
   /** Submit thumbs/feedback for the assistant reply at the given exchange index. */
   onFeedback?: (messageIndex: number, input: TranscriptFeedbackInput) => Promise<void>;
+  /** The Release's uploaded avatar; falls back to the static logo when absent. */
+  avatarUrl?: string | null;
 }
 
-export function Transcript({ messages, onFeedback }: TranscriptProps) {
+export function Transcript({ messages, onFeedback, avatarUrl }: TranscriptProps) {
   const endRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -84,9 +87,9 @@ export function Transcript({ messages, onFeedback }: TranscriptProps) {
             content={m.content}
             pending={m.pending}
             sources={m.sources}
-            safetyAdvisory={m.safetyAdvisory}
             messageIndex={exchangeIndexById.get(m.id)}
             onFeedback={onFeedback}
+            avatarUrl={avatarUrl}
           />
         ),
       )}
@@ -95,17 +98,14 @@ export function Transcript({ messages, onFeedback }: TranscriptProps) {
   );
 }
 
-function DfAvatar() {
+function DfAvatar({ avatarUrl }: { avatarUrl?: string | null }) {
   return (
     <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-df-green-leaf/20 ring-1 ring-df-green-dark/15">
-      <img
-        src="/drfuhrman-logo.svg"
-        alt=""
-        aria-hidden="true"
-        className="h-4 w-4"
-        width={16}
-        height={16}
-      />
+      {avatarUrl ? (
+        <img src={avatarUrl} alt="" aria-hidden="true" className="h-full w-full object-cover" />
+      ) : (
+        <img src="/drfuhrman-logo.svg" alt="" aria-hidden="true" className="h-4 w-4" width={16} height={16} />
+      )}
     </span>
   );
 }
@@ -129,16 +129,16 @@ function AssistantTurn({
   content,
   pending,
   sources,
-  safetyAdvisory,
   messageIndex,
   onFeedback,
+  avatarUrl,
 }: {
   content: string;
   pending?: boolean;
   sources?: string[];
-  safetyAdvisory?: SafetyAdvisory;
   messageIndex?: number;
   onFeedback?: (messageIndex: number, input: TranscriptFeedbackInput) => Promise<void>;
+  avatarUrl?: string | null;
 }) {
   // Which source chip is currently highlighted (0-based index), set when a
   // citation is clicked. Cleared after a short flash.
@@ -162,16 +162,34 @@ function AssistantTurn({
     [sources],
   );
 
-  // Scroll the highlighted chip into view after render (so it exists even if a
-  // layout switch just happened). `nearest` keeps the page/transcript still
-  // unless the chip is actually off-screen.
+  // Bring the highlighted chip into view WITHOUT ever scrolling the page:
+  // scrollIntoView walks every scrollable ancestor (including the window),
+  // which made citation clicks "scroll into the chat somewhere". Instead,
+  // scroll exactly two containers ourselves: the chip strip horizontally
+  // (centering the chip in collapsed one-row mode) and the transcript
+  // scroller vertically (so the chips row above the answer is visible).
   useEffect(() => {
     if (highlight === null) return;
-    chipRefs.current[highlight]?.scrollIntoView({
-      block: "nearest",
-      inline: "nearest",
-      behavior: "smooth",
-    });
+    const chip = chipRefs.current[highlight];
+    if (!chip) return;
+    const strip = chip.parentElement;
+    if (strip && strip.scrollWidth > strip.clientWidth) {
+      const left =
+        chip.getBoundingClientRect().left -
+        strip.getBoundingClientRect().left +
+        strip.scrollLeft -
+        strip.clientWidth / 2 +
+        chip.clientWidth / 2;
+      strip.scrollTo({ left: Math.max(0, left), behavior: "smooth" });
+    }
+    const scroller = chip.closest(".df-chat-scroll") as HTMLElement | null;
+    if (scroller) {
+      const delta =
+        chip.getBoundingClientRect().top -
+        scroller.getBoundingClientRect().top -
+        24;
+      if (Math.abs(delta) > 4) scroller.scrollBy({ top: delta, behavior: "smooth" });
+    }
   }, [highlight, expanded]);
 
   useEffect(
@@ -193,7 +211,7 @@ function AssistantTurn({
         />
       )}
       <div className="flex items-start gap-2">
-        <DfAvatar />
+        <DfAvatar avatarUrl={avatarUrl} />
         <div className="max-w-[88%] space-y-2 rounded-2xl rounded-tl-sm bg-df-green-leaf/15 px-4 py-3 text-sm leading-relaxed text-df-text shadow-sm md:text-base">
           {content ? (
             renderRichText(content, { sources, onCite: handleCite })
@@ -203,16 +221,6 @@ function AssistantTurn({
           {pending && content && <BlinkingCursor />}
         </div>
       </div>
-      {safetyAdvisory && content && !pending && (
-        <div
-          role="alert"
-          data-testid="safety-advisory"
-          className="ml-9 flex max-w-[88%] items-start gap-2 rounded-lg border-l-4 border-amber-400 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-gray-700 md:text-sm"
-        >
-          <span aria-hidden="true" className="mt-0.5">⚕️</span>
-          <span>{safetyAdvisory.text}</span>
-        </div>
-      )}
       {content && !pending && onFeedback && messageIndex !== undefined && (
         <MessageRating messageIndex={messageIndex} onFeedback={onFeedback} />
       )}
@@ -353,7 +361,7 @@ function SourceChips({
             ref={(el) => {
               chipRefs.current[i] = el;
             }}
-            title={s}
+            title={cleanContextTitle(s)}
             className={`inline-flex shrink-0 items-center gap-1 rounded-md border px-2 py-1 text-xs transition ${
               highlight === i
                 ? "border-df-green-dark bg-df-green-leaf/40 text-df-green-dark ring-2 ring-df-green-dark/50"
@@ -364,7 +372,7 @@ function SourceChips({
               {i + 1}
             </span>
             <span aria-hidden="true">{sourceIcon(s)}</span>
-            <span className="max-w-[10rem] truncate">{s}</span>
+            <span className="max-w-[10rem] truncate">{cleanContextTitle(s)}</span>
           </span>
         ))}
       </div>
@@ -372,6 +380,11 @@ function SourceChips({
         <button
           type="button"
           onClick={onToggle}
+          // preventDefault on mousedown: clicking a partially-offscreen button
+          // otherwise focuses it and the browser auto-scrolls it into view
+          // BEFORE mouseup — the target moves and the click never fires (the
+          // "first click just scrolls the page" bug).
+          onMouseDown={(e) => e.preventDefault()}
           className="mt-1 text-xs font-medium text-df-green-dark/80 transition hover:text-df-green-dark"
         >
           {expanded ? "Collapse sources" : `Show all ${sources.length} sources`}
@@ -391,7 +404,7 @@ function sourceIcon(name: string): string {
 /** Resolve a citation number to its source ("context") title for the tooltip. */
 function citeTitle(sources: string[] | undefined, n: number): string {
   if (!sources || sources.length === 0) return "Dr. Fuhrman's corpus";
-  return sources[n - 1] ?? sources[sources.length - 1];
+  return cleanContextTitle(sources[n - 1] ?? sources[sources.length - 1]);
 }
 
 interface InlineOpts {
@@ -410,6 +423,7 @@ function Citation({ n, sources, onCite }: { n: number } & InlineOpts) {
       tabIndex={0}
       aria-label={`Source ${n}: ${title}`}
       onClick={activate}
+      onMouseDown={(e) => e.preventDefault()}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
@@ -444,10 +458,12 @@ function renderRichText(text: string, opts?: InlineOpts): ReactNode {
 
 function renderInline(s: string, opts?: InlineOpts): ReactNode[] {
   const out: ReactNode[] = [];
-  // Citations: the live model emits single-bracket `[n]`; the static showcase
-  // uses double-bracket `[[n]]`. Support both (double tried first so `[[3]]`
-  // isn't read as the inner `[3]`).
-  const re = /\*\*([^*]+)\*\*|\*([^*]+)\*|\[\[(\d+)\]\]|\[(\d+)\]/g;
+  // Citations: the live model emits single-bracket refs, BOTH singular `[7]`
+  // and grouped `[2, 8]` — every number in a group gets its own interactive
+  // circle (a bare "[2, 8]" as text was the old, dead-looking fallback). The
+  // static showcase's double-bracket `[[n]]` stays supported (tried first so
+  // `[[3]]` isn't read as the inner `[3]`).
+  const re = /\*\*([^*]+)\*\*|\*([^*]+)\*|\[\[(\d+)\]\]|\[(\d+(?:\s*,\s*\d+)*)\]/g;
   let last = 0;
   let m: RegExpExecArray | null;
   let key = 0;
@@ -462,14 +478,15 @@ function renderInline(s: string, opts?: InlineOpts): ReactNode[] {
     } else if (m[2] !== undefined) {
       out.push(<em key={key++}>{m[2]}</em>);
     } else {
-      out.push(
-        <Citation
-          key={key++}
-          n={Number(m[3] ?? m[4])}
-          sources={opts?.sources}
-          onCite={opts?.onCite}
-        />,
-      );
+      const nums = (m[3] ?? m[4] ?? "")
+        .split(",")
+        .map((part) => Number(part.trim()))
+        .filter((n) => Number.isInteger(n) && n > 0);
+      nums.forEach((n) => {
+        out.push(
+          <Citation key={key++} n={n} sources={opts?.sources} onCite={opts?.onCite} />,
+        );
+      });
     }
     last = re.lastIndex;
   }
