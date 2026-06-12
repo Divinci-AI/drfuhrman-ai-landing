@@ -517,7 +517,7 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
               <div
                 role="alert"
                 data-testid="safety-advisory"
-                className="flex items-start gap-2 rounded-lg border-l-4 border-amber-400 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-gray-700 md:text-sm"
+                className="ml-9 flex max-w-[88%] items-start gap-2 rounded-lg border-l-4 border-amber-400 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-gray-700 md:text-sm"
               >
                 <span aria-hidden="true" className="mt-0.5">⚕️</span>
                 <span>{latestAdvisory.text}</span>

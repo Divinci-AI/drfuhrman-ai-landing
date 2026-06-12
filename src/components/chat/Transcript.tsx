@@ -56,11 +56,33 @@ interface TranscriptProps {
 }
 
 export function Transcript({ messages, onFeedback, avatarUrl }: TranscriptProps) {
-  const endRef = useRef<HTMLDivElement | null>(null);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const lastMsgRef = useRef<HTMLDivElement | null>(null);
 
+  // Auto-scroll, scoped to the transcript scroller only (never the page):
+  // - user message / pending dots → bottom, so the visitor sees the activity
+  // - completed assistant reply  → TOP of that reply, so they read it from
+  //   the beginning instead of landing at its end.
+  const lastSig = (() => {
+    const last = messages[messages.length - 1];
+    if (!last) return "empty";
+    return `${last.id}:${last.pending ? "pending" : "done"}:${last.content ? "c" : ""}`;
+  })();
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [messages]);
+    const root = rootRef.current;
+    if (!root) return;
+    const last = messages[messages.length - 1];
+    if (last && last.role === "assistant" && !last.pending && last.content) {
+      const el = lastMsgRef.current;
+      if (el) {
+        root.scrollTop +=
+          el.getBoundingClientRect().top - root.getBoundingClientRect().top - 8;
+      }
+      return;
+    }
+    root.scrollTop = root.scrollHeight;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastSig]);
 
   // Map each completed assistant reply to its index in the signed anonymous
   // transcript (one entry per exchange) for feedback submission.
@@ -74,26 +96,27 @@ export function Transcript({ messages, onFeedback, avatarUrl }: TranscriptProps)
 
   return (
     <div
+      ref={rootRef}
       className="df-chat-scroll flex max-h-[26rem] flex-col gap-5 overflow-y-auto px-1 md:max-h-[32rem]"
       role="log"
       aria-live="polite"
     >
-      {messages.map((m) =>
-        m.role === "user" ? (
-          <UserBubble key={m.id} content={m.content} />
-        ) : (
-          <AssistantTurn
-            key={m.id}
-            content={m.content}
-            pending={m.pending}
-            sources={m.sources}
-            messageIndex={exchangeIndexById.get(m.id)}
-            onFeedback={onFeedback}
-            avatarUrl={avatarUrl}
-          />
-        ),
-      )}
-      <div ref={endRef} />
+      {messages.map((m, i) => (
+        <div key={m.id} ref={i === messages.length - 1 ? lastMsgRef : undefined}>
+          {m.role === "user" ? (
+            <UserBubble content={m.content} />
+          ) : (
+            <AssistantTurn
+              content={m.content}
+              pending={m.pending}
+              sources={m.sources}
+              messageIndex={exchangeIndexById.get(m.id)}
+              onFeedback={onFeedback}
+              avatarUrl={avatarUrl}
+            />
+          )}
+        </div>
+      ))}
     </div>
   );
 }
@@ -172,23 +195,27 @@ function AssistantTurn({
     if (highlight === null) return;
     const chip = chipRefs.current[highlight];
     if (!chip) return;
-    const strip = chip.parentElement;
-    if (strip && strip.scrollWidth > strip.clientWidth) {
-      const left =
-        chip.getBoundingClientRect().left -
-        strip.getBoundingClientRect().left +
-        strip.scrollLeft -
-        strip.clientWidth / 2 +
-        chip.clientWidth / 2;
-      strip.scrollTo({ left: Math.max(0, left), behavior: "smooth" });
-    }
+    // Instant (non-smooth) jumps land exactly: concurrent smooth scrolls were
+    // getting interrupted and stopping partway ("scrolls up a little but not
+    // all the way to the context bubble").
     const scroller = chip.closest(".df-chat-scroll") as HTMLElement | null;
     if (scroller) {
       const delta =
         chip.getBoundingClientRect().top -
         scroller.getBoundingClientRect().top -
-        24;
-      if (Math.abs(delta) > 4) scroller.scrollBy({ top: delta, behavior: "smooth" });
+        16;
+      if (Math.abs(delta) > 4) scroller.scrollTop += delta;
+    }
+    const strip = chip.parentElement;
+    if (strip && strip.scrollWidth > strip.clientWidth) {
+      strip.scrollLeft = Math.max(
+        0,
+        chip.getBoundingClientRect().left -
+          strip.getBoundingClientRect().left +
+          strip.scrollLeft -
+          strip.clientWidth / 2 +
+          chip.clientWidth / 2,
+      );
     }
   }, [highlight, expanded]);
 
@@ -379,7 +406,10 @@ function SourceChips({
       {sources.length > SOURCE_TOGGLE_THRESHOLD && (
         <button
           type="button"
-          onClick={onToggle}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggle();
+          }}
           // preventDefault on mousedown: clicking a partially-offscreen button
           // otherwise focuses it and the browser auto-scrolls it into view
           // BEFORE mouseup — the target moves and the click never fires (the
@@ -422,7 +452,10 @@ function Citation({ n, sources, onCite }: { n: number } & InlineOpts) {
       role="button"
       tabIndex={0}
       aria-label={`Source ${n}: ${title}`}
-      onClick={activate}
+      onClick={(e) => {
+        e.stopPropagation();
+        activate();
+      }}
       onMouseDown={(e) => e.preventDefault()}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -516,10 +549,10 @@ function renderCitations(s: string, keyBase: number, opts?: InlineOpts): ReactNo
 
 function ThinkingDots() {
   return (
-    <span className="inline-flex gap-1" aria-label="Thinking">
-      <span className="h-2 w-2 animate-pulse rounded-full bg-df-green-dark/40 [animation-delay:-0.3s]" />
-      <span className="h-2 w-2 animate-pulse rounded-full bg-df-green-dark/40 [animation-delay:-0.15s]" />
-      <span className="h-2 w-2 animate-pulse rounded-full bg-df-green-dark/40" />
+    <span className="inline-flex items-end gap-1" aria-label="Thinking">
+      <span className="h-2 w-2 animate-bounce rounded-full bg-df-green-dark/40 [animation-delay:-0.32s]" />
+      <span className="h-2 w-2 animate-bounce rounded-full bg-df-green-dark/40 [animation-delay:-0.16s]" />
+      <span className="h-2 w-2 animate-bounce rounded-full bg-df-green-dark/40" />
     </span>
   );
 }
