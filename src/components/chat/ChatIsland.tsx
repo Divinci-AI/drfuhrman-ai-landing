@@ -510,13 +510,18 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
             <Transcript messages={messages} onFeedback={handleFeedback} avatarUrl={avatarUrl} />
           </div>
           {latestAdvisory && (
-            <div
-              role="alert"
-              data-testid="safety-advisory"
-              className="flex items-start gap-2 border-t border-amber-200 border-l-4 border-l-amber-400 bg-amber-50 px-4 py-2.5 text-xs leading-relaxed text-gray-700 md:px-6 md:text-sm"
-            >
-              <span aria-hidden="true" className="mt-0.5">⚕️</span>
-              <span>{latestAdvisory.text}</span>
+            <div className="px-4 pb-3 md:px-6">
+              {/* Same card style as the original inline banner (rounded, amber
+                  left border) — just pinned here below the transcript instead
+                  of buried in the scrollback. */}
+              <div
+                role="alert"
+                data-testid="safety-advisory"
+                className="flex items-start gap-2 rounded-lg border-l-4 border-amber-400 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-gray-700 md:text-sm"
+              >
+                <span aria-hidden="true" className="mt-0.5">⚕️</span>
+                <span>{latestAdvisory.text}</span>
+              </div>
             </div>
           )}
           <div className="border-t border-df-green-dark/10 bg-white/70 p-3 backdrop-blur-sm">

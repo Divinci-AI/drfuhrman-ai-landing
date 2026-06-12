@@ -458,36 +458,56 @@ function renderRichText(text: string, opts?: InlineOpts): ReactNode {
 
 function renderInline(s: string, opts?: InlineOpts): ReactNode[] {
   const out: ReactNode[] = [];
-  // Citations: the live model emits single-bracket refs, BOTH singular `[7]`
-  // and grouped `[2, 8]` — every number in a group gets its own interactive
-  // circle (a bare "[2, 8]" as text was the old, dead-looking fallback). The
-  // static showcase's double-bracket `[[n]]` stays supported (tried first so
-  // `[[3]]` isn't read as the inner `[3]`).
-  const re = /\*\*([^*]+)\*\*|\*([^*]+)\*|\[\[(\d+)\]\]|\[(\d+(?:\s*,\s*\d+)*)\]/g;
+  // First pass: bold / italic spans. Their CONTENT is run through the
+  // citation pass too — refs inside **bold**/*italic* used to fall out as
+  // dead text because the bold branch pushed its capture as a plain string.
+  const re = /\*\*([^*]+)\*\*|\*([^*]+)\*/g;
   let last = 0;
   let m: RegExpExecArray | null;
   let key = 0;
   while ((m = re.exec(s)) !== null) {
-    if (m.index > last) out.push(s.slice(last, m.index));
+    if (m.index > last) out.push(...renderCitations(s.slice(last, m.index), key, opts));
+    key += 100; // keep keys unique across segments
     if (m[1] !== undefined) {
       out.push(
         <strong key={key++} className="font-semibold">
-          {m[1]}
+          {renderCitations(m[1], key + 1, opts)}
         </strong>,
       );
+      key += 100;
     } else if (m[2] !== undefined) {
-      out.push(<em key={key++}>{m[2]}</em>);
-    } else {
-      const nums = (m[3] ?? m[4] ?? "")
-        .split(",")
-        .map((part) => Number(part.trim()))
-        .filter((n) => Number.isInteger(n) && n > 0);
-      nums.forEach((n) => {
-        out.push(
-          <Citation key={key++} n={n} sources={opts?.sources} onCite={opts?.onCite} />,
-        );
-      });
+      out.push(<em key={key++}>{renderCitations(m[2], key + 1, opts)}</em>);
+      key += 100;
     }
+    last = re.lastIndex;
+  }
+  if (last < s.length) out.push(...renderCitations(s.slice(last), key, opts));
+  return out;
+}
+
+/**
+ * Citation pass: every bracket ref becomes an interactive circle — singular
+ * `[7]`, grouped `[2, 8]`, ranges `[4-6]` (endpoints), and the static
+ * showcase's `[[n]]`. A bare bracket ref as text is the old, dead-looking
+ * fallback we never want.
+ */
+function renderCitations(s: string, keyBase: number, opts?: InlineOpts): ReactNode[] {
+  const out: ReactNode[] = [];
+  const re = /\[\[(\d+)\]\]|\[(\d+(?:\s*[,\u2013-]\s*\d+)*)\]/g;
+  let last = 0;
+  let m: RegExpExecArray | null;
+  let key = keyBase;
+  while ((m = re.exec(s)) !== null) {
+    if (m.index > last) out.push(s.slice(last, m.index));
+    const nums = (m[1] ?? m[2] ?? "")
+      .split(/[,\u2013-]/)
+      .map((part) => Number(part.trim()))
+      .filter((n) => Number.isInteger(n) && n > 0);
+    nums.forEach((n) => {
+      out.push(
+        <Citation key={key++} n={n} sources={opts?.sources} onCite={opts?.onCite} />,
+      );
+    });
     last = re.lastIndex;
   }
   if (last < s.length) out.push(s.slice(last));
