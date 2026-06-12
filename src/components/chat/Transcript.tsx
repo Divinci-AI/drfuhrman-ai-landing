@@ -1,4 +1,11 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type MutableRefObject,
+  type ReactNode,
+} from "react";
 
 export interface TranscriptMessage {
   id: string;
@@ -113,6 +120,11 @@ function UserBubble({ content }: { content: string }) {
   );
 }
 
+/** How many source chips to keep visible (scrollable) before offering "Show all". */
+const SOURCE_TOGGLE_THRESHOLD = 3;
+/** How long a citation-clicked source chip stays highlighted (ms). */
+const SOURCE_HIGHLIGHT_MS = 2600;
+
 function AssistantTurn({
   content,
   pending,
@@ -128,26 +140,63 @@ function AssistantTurn({
   messageIndex?: number;
   onFeedback?: (messageIndex: number, input: TranscriptFeedbackInput) => Promise<void>;
 }) {
+  // Which source chip is currently highlighted (0-based index), set when a
+  // citation is clicked. Cleared after a short flash.
+  const [highlight, setHighlight] = useState<number | null>(null);
+  const [expanded, setExpanded] = useState(false);
+  const chipRefs = useRef<Array<HTMLSpanElement | null>>([]);
+  const clearTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Click a `[[n]]` citation → highlight + scroll the n-th source chip into
+  // view. Works in both the collapsed (one-row, horizontally scrollable) and
+  // expanded (wrapped) layouts.
+  const handleCite = useCallback(
+    (n: number) => {
+      const count = sources?.length ?? 0;
+      if (count === 0) return;
+      const idx = Math.min(Math.max(n - 1, 0), count - 1);
+      setHighlight(idx);
+      if (clearTimer.current) clearTimeout(clearTimer.current);
+      clearTimer.current = setTimeout(() => setHighlight(null), SOURCE_HIGHLIGHT_MS);
+    },
+    [sources],
+  );
+
+  // Scroll the highlighted chip into view after render (so it exists even if a
+  // layout switch just happened). `nearest` keeps the page/transcript still
+  // unless the chip is actually off-screen.
+  useEffect(() => {
+    if (highlight === null) return;
+    chipRefs.current[highlight]?.scrollIntoView({
+      block: "nearest",
+      inline: "nearest",
+      behavior: "smooth",
+    });
+  }, [highlight, expanded]);
+
+  useEffect(
+    () => () => {
+      if (clearTimer.current) clearTimeout(clearTimer.current);
+    },
+    [],
+  );
+
   return (
     <div className="flex flex-col gap-1.5">
       {sources && sources.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 pl-9">
-          {sources.map((s) => (
-            <span
-              key={s}
-              className="inline-flex max-w-full items-center gap-1 rounded-md border border-df-green-dark/15 bg-white/80 px-2 py-1 text-xs text-gray-600"
-            >
-              <span aria-hidden="true">{sourceIcon(s)}</span>
-              <span className="truncate">{s}</span>
-            </span>
-          ))}
-        </div>
+        <SourceChips
+          sources={sources}
+          expanded={expanded}
+          onToggle={() => setExpanded((v) => !v)}
+          highlight={highlight}
+          chipRefs={chipRefs}
+        />
       )}
       <div className="flex items-start gap-2">
         <DfAvatar />
         <div className="max-w-[88%] space-y-2 rounded-2xl rounded-tl-sm bg-df-green-leaf/15 px-4 py-3 text-sm leading-relaxed text-df-text shadow-sm md:text-base">
           {content ? (
-            renderRichText(content)
+            renderRichText(content, { sources, onCite: handleCite })
           ) : pending ? (
             <ThinkingDots />
           ) : null}
@@ -269,6 +318,69 @@ function MessageRating({
   );
 }
 
+/**
+ * Retrieved-source chips ("context bubbles"). Collapsed by default to a SINGLE
+ * row — the chips sit in a horizontally-scrollable strip (no visible
+ * scrollbar) so a long source list never balloons the reply to several rows.
+ * A "Show all N sources" toggle expands them to a wrapped grid. A chip
+ * highlights (and scrolls into view) when its `[[n]]` citation is clicked.
+ */
+function SourceChips({
+  sources,
+  expanded,
+  onToggle,
+  highlight,
+  chipRefs,
+}: {
+  sources: string[];
+  expanded: boolean;
+  onToggle: () => void;
+  highlight: number | null;
+  chipRefs: MutableRefObject<Array<HTMLSpanElement | null>>;
+}) {
+  return (
+    <div className="pl-9">
+      <div
+        className={
+          expanded
+            ? "flex flex-wrap items-center gap-1.5"
+            : "flex flex-nowrap items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        }
+      >
+        {sources.map((s, i) => (
+          <span
+            key={`${s}-${i}`}
+            ref={(el) => {
+              chipRefs.current[i] = el;
+            }}
+            title={s}
+            className={`inline-flex shrink-0 items-center gap-1 rounded-md border px-2 py-1 text-xs transition ${
+              highlight === i
+                ? "border-df-green-dark bg-df-green-leaf/40 text-df-green-dark ring-2 ring-df-green-dark/50"
+                : "border-df-green-dark/15 bg-white/80 text-gray-600"
+            }`}
+          >
+            <span className="text-[0.7rem] font-semibold text-df-green-dark/70" aria-hidden="true">
+              {i + 1}
+            </span>
+            <span aria-hidden="true">{sourceIcon(s)}</span>
+            <span className="max-w-[10rem] truncate">{s}</span>
+          </span>
+        ))}
+      </div>
+      {sources.length > SOURCE_TOGGLE_THRESHOLD && (
+        <button
+          type="button"
+          onClick={onToggle}
+          className="mt-1 text-xs font-medium text-df-green-dark/80 transition hover:text-df-green-dark"
+        >
+          {expanded ? "Collapse sources" : `Show all ${sources.length} sources`}
+        </button>
+      )}
+    </div>
+  );
+}
+
 function sourceIcon(name: string): string {
   const ext = name.split(".").pop()?.toLowerCase();
   if (ext === "txt") return "📑";
@@ -276,22 +388,66 @@ function sourceIcon(name: string): string {
   return "📄";
 }
 
+/** Resolve a citation number to its source ("context") title for the tooltip. */
+function citeTitle(sources: string[] | undefined, n: number): string {
+  if (!sources || sources.length === 0) return "Dr. Fuhrman's corpus";
+  return sources[n - 1] ?? sources[sources.length - 1];
+}
+
+interface InlineOpts {
+  sources?: string[];
+  onCite?: (n: number) => void;
+}
+
+/** A `[[n]]` citation: a superscript number with a hover/focus source tooltip;
+ *  clicking it highlights + scrolls to the matching source chip. */
+function Citation({ n, sources, onCite }: { n: number } & InlineOpts) {
+  const title = citeTitle(sources, n);
+  const activate = () => onCite?.(n);
+  return (
+    <sup
+      role="button"
+      tabIndex={0}
+      aria-label={`Source ${n}: ${title}`}
+      onClick={activate}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          activate();
+        }
+      }}
+      className="df-cite group relative ml-0.5 cursor-pointer rounded bg-df-green-leaf/30 px-1 py-0.5 text-[0.65em] font-semibold text-df-green-dark transition hover:bg-df-green-leaf/60 focus:outline-none focus-visible:ring-1 focus-visible:ring-df-green-dark"
+    >
+      {n}
+      <span
+        role="tooltip"
+        className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1.5 hidden w-max max-w-[15rem] -translate-x-1/2 whitespace-normal rounded-md bg-df-text px-2.5 py-1.5 text-left text-xs font-normal not-italic leading-snug text-white shadow-lg group-hover:block group-focus-within:block"
+      >
+        {title}
+      </span>
+    </sup>
+  );
+}
+
 // Lightweight inline formatter — mirrors the static showcase's mini-syntax
-// so the live reply renders **bold** / *italic* instead of raw asterisks,
-// split into paragraphs on blank lines. Deliberately small (no markdown
-// dependency); anything it doesn't recognise renders as plain text.
-function renderRichText(text: string): ReactNode {
+// so the live reply renders **bold** / *italic* / [[n]] citations instead of
+// raw markup, split into paragraphs on blank lines. Deliberately small (no
+// markdown dependency); anything it doesn't recognise renders as plain text.
+function renderRichText(text: string, opts?: InlineOpts): ReactNode {
   const paragraphs = text
     .replace(/\r\n/g, "\n")
     .split(/\n{2,}/)
     .map((p) => p.trim())
     .filter(Boolean);
-  return paragraphs.map((para, i) => <p key={i}>{renderInline(para)}</p>);
+  return paragraphs.map((para, i) => <p key={i}>{renderInline(para, opts)}</p>);
 }
 
-function renderInline(s: string): ReactNode[] {
+function renderInline(s: string, opts?: InlineOpts): ReactNode[] {
   const out: ReactNode[] = [];
-  const re = /\*\*([^*]+)\*\*|\*([^*]+)\*/g;
+  // Citations: the live model emits single-bracket `[n]`; the static showcase
+  // uses double-bracket `[[n]]`. Support both (double tried first so `[[3]]`
+  // isn't read as the inner `[3]`).
+  const re = /\*\*([^*]+)\*\*|\*([^*]+)\*|\[\[(\d+)\]\]|\[(\d+)\]/g;
   let last = 0;
   let m: RegExpExecArray | null;
   let key = 0;
@@ -305,6 +461,15 @@ function renderInline(s: string): ReactNode[] {
       );
     } else if (m[2] !== undefined) {
       out.push(<em key={key++}>{m[2]}</em>);
+    } else {
+      out.push(
+        <Citation
+          key={key++}
+          n={Number(m[3] ?? m[4])}
+          sources={opts?.sources}
+          onCite={opts?.onCite}
+        />,
+      );
     }
     last = re.lastIndex;
   }

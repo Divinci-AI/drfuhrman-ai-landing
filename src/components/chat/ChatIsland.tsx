@@ -259,14 +259,15 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
         }
         const lastMsg = data.transcript?.[data.transcript.length - 1];
         const reply = lastMsg?.response ?? "(no response)";
-        // Deduped retrieved-source filenames → rendered as chips above the
-        // reply, mirroring the static showcase.
-        const sources = Array.from(
-          new Set(
-            (lastMsg?.context ?? [])
-              .map((c) => c.metadata?.originalName)
-              .filter((n): n is string => typeof n === "string" && n.length > 0),
-          ),
+        // One source per retrieved context item, IN ORDER and NOT deduped —
+        // the model's inline `[n]` citations are 1-based indices into this same
+        // context list, so `sources[n-1]` must line up with the n-th item for
+        // the citation tooltip + click-to-highlight to point at the right chip.
+        // (A missing originalName keeps its slot via a fallback so indices never
+        // shift.) The chips collapse to one row in the Transcript, so showing
+        // every item — including same-file chunks — stays tidy.
+        const sources = (lastMsg?.context ?? []).map(
+          (c) => c.metadata?.originalName || "Dr. Fuhrman's corpus",
         );
         // Medical-safety advisory (server-side medicalSafety check). Carried
         // verbatim from the signed payload → rendered as an amber banner
