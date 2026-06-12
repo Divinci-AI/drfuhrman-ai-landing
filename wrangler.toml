@@ -34,7 +34,7 @@ new_sqlite_classes = ["EmailQuotaCoordinator"]
 
 [vars]
 DIVINCI_API_BASE = "https://api.stage.divinci.app"
-DIVINCI_RELEASE_ID = "6a118e81e44ce78e97327aa8"
+DIVINCI_RELEASE_ID = "6a2ba698857d4d8b90fd6734"
 
 [env.staging]
 name = "drfuhrman-ai-landing-staging"
@@ -59,7 +59,7 @@ new_sqlite_classes = ["EmailQuotaCoordinator"]
 
 [env.staging.vars]
 DIVINCI_API_BASE = "https://api.stage.divinci.app"
-DIVINCI_RELEASE_ID = "6a118e81e44ce78e97327aa8"
+DIVINCI_RELEASE_ID = "6a2ba698857d4d8b90fd6734"
 
 # ── Production: the DrFuhrman team's OWN Cloudflare account ──────────────────
 # Deployed with `wrangler deploy --env production`, authenticated to the
@@ -104,4 +104,4 @@ new_sqlite_classes = ["EmailQuotaCoordinator"]
 # Worker's origin + a Release that permits anonymous chat).
 [env.production.vars]
 DIVINCI_API_BASE = "https://api.stage.divinci.app"
-DIVINCI_RELEASE_ID = "6a118e81e44ce78e97327aa8"
+DIVINCI_RELEASE_ID = "6a2ba698857d4d8b90fd6734"
