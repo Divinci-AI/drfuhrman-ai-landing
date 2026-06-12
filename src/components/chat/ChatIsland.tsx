@@ -69,6 +69,18 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [chatStarted, setChatStarted] = useState(false);
+  // Terms-of-Service gate (medical disclaimer): set when chat-send returns
+  // 403 TERMS_NOT_ACCEPTED. Holds the gate payload + the blocked message so
+  // "I Agree" can accept and automatically re-send it.
+  const [tosGate, setTosGate] = useState<{
+    tosId: string;
+    version: number;
+    title: string;
+    content: string;
+    retry: { content: string; isStarter?: boolean };
+  } | null>(null);
+  const [tosBusy, setTosBusy] = useState(false);
+  const [tosError, setTosError] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [focusSignal, setFocusSignal] = useState(0);
 
@@ -230,6 +242,37 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
           return;
         }
 
+        if (resp.status === 403) {
+          // Terms-of-Service gate: the release requires accepting a published
+          // medical disclaimer / ToS version before chatting. Pop the modal
+          // and stash the message so an "I Agree" re-sends it automatically.
+          // Roll the bubbles back (nothing was sent) without an error toast.
+          const gate = (await resp.json().catch(() => null)) as {
+            error?: {
+              code?: string;
+              details?: { tosId?: string; version?: number; title?: string; content?: string };
+            };
+          } | null;
+          const d = gate?.error?.details;
+          if (gate?.error?.code === "TERMS_NOT_ACCEPTED" && d?.tosId && typeof d.version === "number") {
+            setMessages((prev) =>
+              prev.filter(
+                (m) => m.id !== assistantPlaceholder.id && m.id !== userMsg.id,
+              ),
+            );
+            setError(null);
+            setTosGate({
+              tosId: d.tosId,
+              version: d.version,
+              title: d.title || "Terms of Service",
+              content: d.content || "",
+              retry: { content, isStarter },
+            });
+            return;
+          }
+          throw new Error(`chat-send failed: ${resp.status}`);
+        }
+
         if (!resp.ok) {
           throw new Error(`chat-send failed: ${resp.status}`);
         }
@@ -352,6 +395,41 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
       window.removeEventListener("drfuhrman:populateInput", handler);
   }, []);
 
+  // Accept the gated ToS version for this visitor's sessionId, then re-send
+  // the message that was blocked. A 409 means a newer version was published
+  // mid-flight — surface it and let the next send refetch the fresh gate.
+  const acceptTos = useCallback(async () => {
+    if (!tosGate || tosBusy) return;
+    setTosBusy(true);
+    setTosError(null);
+    try {
+      const resp = await fetch("/api/terms-accept", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tosId: tosGate.tosId,
+          version: tosGate.version,
+          sessionId: ensureSessionId(),
+        }),
+      });
+      if (!resp.ok) {
+        setTosError(
+          resp.status === 409
+            ? "These terms were just updated — please close and try again to see the new version."
+            : "Could not record your acceptance. Please try again.",
+        );
+        return;
+      }
+      const retry = tosGate.retry;
+      setTosGate(null);
+      handleSend(retry.content, { starter: retry.isStarter });
+    } catch {
+      setTosError("Could not record your acceptance. Please try again.");
+    } finally {
+      setTosBusy(false);
+    }
+  }, [tosGate, tosBusy, ensureSessionId, handleSend]);
+
   const showStarters = messages.length === 0;
   const emailRequired = !isValidEmail(email);
   // EVERY user message counts toward the free-message quota — clicking a
@@ -471,6 +549,109 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
       pending={pending}
       quotaExhausted={quotaExhausted}
     />
+    {tosGate && (
+      <TermsModal
+        title={tosGate.title}
+        content={tosGate.content}
+        busy={tosBusy}
+        error={tosError}
+        onAgree={acceptTos}
+        onClose={() => {
+          setTosGate(null);
+          setTosError(null);
+        }}
+      />
+    )}
     </>
   );
+}
+
+/**
+ * Terms-of-Service / medical-disclaimer acceptance modal. Shown when the
+ * release gates chat behind a published ToS version. Renders the document's
+ * markdown with a deliberately tiny formatter (headings + bold + paragraphs —
+ * same no-dependency approach as the transcript renderer).
+ */
+function TermsModal({
+  title,
+  content,
+  busy,
+  error,
+  onAgree,
+  onClose,
+}: {
+  title: string;
+  content: string;
+  busy: boolean;
+  error: string | null;
+  onAgree: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
+    >
+      <div className="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-df-green-dark/15 bg-white shadow-2xl">
+        <div className="border-b border-df-green-dark/10 bg-df-green-leaf/10 px-5 py-3">
+          <h2 className="text-base font-semibold text-df-green-dark">{title}</h2>
+        </div>
+        <div className="df-chat-scroll flex-1 space-y-2 overflow-y-auto px-5 py-4 text-sm leading-relaxed text-df-text">
+          {renderTosContent(content)}
+        </div>
+        <div className="border-t border-df-green-dark/10 bg-white/90 px-5 py-3">
+          {error && <p className="mb-2 text-xs text-red-600">{error}</p>}
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700"
+            >
+              Not now
+            </button>
+            <button
+              type="button"
+              onClick={onAgree}
+              disabled={busy}
+              className="rounded-lg bg-df-green-dark px-4 py-1.5 text-sm font-medium text-white transition hover:bg-df-green-mid disabled:opacity-60"
+            >
+              {busy ? "Saving…" : "I Agree"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Markdown-lite for the ToS body: #/##/### headings, **bold**, paragraphs. */
+function renderTosContent(text: string) {
+  const blocks = text
+    .replace(/\r\n/g, "\n")
+    .split(/\n{2,}/)
+    .map((b) => b.trim())
+    .filter(Boolean);
+  return blocks.map((block, i) => {
+    const heading = block.match(/^(#{1,3})\s+(.*)$/);
+    const renderBold = (s: string) =>
+      s.split(/\*\*([^*]+)\*\*/g).map((part, j) =>
+        j % 2 === 1 ? (
+          <strong key={j} className="font-semibold">
+            {part}
+          </strong>
+        ) : (
+          part
+        ),
+      );
+    if (heading) {
+      return (
+        <p key={i} className="pt-1 font-semibold text-df-green-dark">
+          {renderBold(heading[2])}
+        </p>
+      );
+    }
+    return <p key={i}>{renderBold(block)}</p>;
+  });
 }
