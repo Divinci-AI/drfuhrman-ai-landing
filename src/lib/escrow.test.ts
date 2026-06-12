@@ -38,6 +38,7 @@ describe("escrow", () => {
         email: null,
         emailSkipped: false,
         transcriptId: null,
+        sessionId: null,
         createdAt: null,
       });
     });
