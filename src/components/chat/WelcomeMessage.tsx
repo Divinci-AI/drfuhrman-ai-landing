@@ -15,7 +15,7 @@ export function WelcomeMessage({ text, avatarUrl }: WelcomeMessageProps) {
           <img src="/drfuhrman-logo.svg" alt="" aria-hidden="true" className="h-5 w-5" width={20} height={20} />
         )}
       </span>
-      <div className="welcome-bubble max-w-[24rem] rounded-2xl rounded-tl-sm bg-df-bubble-user/75 px-4 py-3 text-sm leading-relaxed text-df-text shadow-sm transition-colors duration-200">
+      <div className="welcome-bubble max-w-[30rem] rounded-2xl rounded-tl-sm bg-df-bubble-user/75 px-4 py-3 text-sm leading-relaxed text-df-text shadow-sm transition-colors duration-200">
         {text}
       </div>
     </div>
