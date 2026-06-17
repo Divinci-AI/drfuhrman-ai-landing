@@ -76,7 +76,13 @@ const t = getUI(lang).hero;
       /* Email label + member-login chip — same frosted tint as the orb,
          kept extremely subtle so the text reads without a heavy pill. */
       .chat-glass-chip {
-        background-image: var(--chat-glass-gradient);
+        /* Semi-transparent white so the chip text stays readable even when
+           the glass orb's hover mask eats through the frosted backdrop.
+           Opaque enough for legibility, transparent enough to still feel
+           like a glass highlight. */
+        background: rgba(255, 255, 255, 0.55);
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
       }
       @media (min-width: 768px) {
         .chat-panel-wrapper {

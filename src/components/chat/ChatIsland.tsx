@@ -11,6 +11,11 @@ import { SignupCTA } from "./SignupCTA";
 import { isDisposableEmail } from "../../lib/disposable-emails";
 import { getLocaleMeta, DEFAULT_LOCALE } from "../../i18n/locales";
 import { getUI } from "../../i18n";
+import { withRef } from "../../lib/links";
+
+// Legal links shown under the chat disclaimer (canonical Divinci pages).
+const TERMS_URL = withRef("https://divinci.ai/terms-of-service/", "hero-disclaimer");
+const PRIVACY_URL = withRef("https://divinci.ai/privacy-policy/", "hero-disclaimer");
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // A disposable email is NOT valid for the gate — keeps the email gate
@@ -565,6 +570,25 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
         {t.disclaimer[0]} {t.disclaimer[1]}
         <br />
         {t.disclaimer[2]}
+      </p>
+      <p className="text-center text-xs text-gray-500">
+        <a
+          href={PRIVACY_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline underline-offset-2 hover:text-df-green-dark"
+        >
+          {getUI(lang).footer.privacy}
+        </a>
+        <span className="px-1.5 text-gray-400">·</span>
+        <a
+          href={TERMS_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline underline-offset-2 hover:text-df-green-dark"
+        >
+          {getUI(lang).footer.terms}
+        </a>
       </p>
       {error && <p className="text-xs text-red-600">{error}</p>}
     </div>

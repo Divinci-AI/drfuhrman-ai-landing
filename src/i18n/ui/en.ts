@@ -125,6 +125,8 @@ export const en = {
     emailAriaLabel: "Your email",
     /** Sticky composer's email placeholder. */
     emailPlaceholderSticky: "First, your email to start chatting…",
+    /** Main chat email placeholder — mentions newsletter opt-in. */
+    emailPlaceholder: "your@email.com, Join Our Newsletter",
     askButton: "Ask",
     questionPlaceholder: "Type your question…",
     questionAriaLabel: "Ask the Dr. Fuhrman AI",
@@ -144,6 +146,9 @@ export const en = {
       "Please use a permanent email address — disposable inboxes aren't supported.",
     errorNetwork:
       "Network error — that message wasn't delivered. Please try again.",
+    /** Shown under the email field once a valid address is entered. */
+    newsletterConsent:
+      "By continuing, you agree to receive Nutritarian insights from Dr. Fuhrman's newsletter.",
     /** Sticky bar nudge once the free message is spent. */
     quotaExhaustedNudge:
       "You've used your free message — keep talking to Dr. Fuhrman's AI.",
