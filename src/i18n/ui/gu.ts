@@ -125,8 +125,6 @@ export const gu: UIStrings = {
     online: "ઑનલાઇન",
     assistantLabel: "સહાયક",
     recommendationPrefix: "મને લાગ્યું કે તમને આમાં રસ હોઈ શકે",
-    composerAria: "ચેટમાં તમારો પોતાનો પ્રશ્ન પૂછો",
-    composerPlaceholder: "Dr. Fuhrman AI ને તમારો પોતાનો પ્રશ્ન પૂછો…",
     questions: [
       "Nutritarian આહાર શરૂ કરવાનાં પહેલાં ત્રણ પગલાં કયાં છે?",
       "એક વાક્યમાં કહીએ તો, Nutritarian આહાર શું છે?",

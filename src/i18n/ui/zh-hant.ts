@@ -123,8 +123,6 @@ export const zhHant: UIStrings = {
     online: "線上",
     assistantLabel: "助理",
     recommendationPrefix: "我注意到你可能對以下內容感興趣",
-    composerAria: "在聊天中提出你自己的問題",
-    composerPlaceholder: "向 Dr. Fuhrman 的 AI 提出你自己的問題…",
     questions: [
       "開始 Nutritarian 飲食的前三個步驟是什麼？",
       "用一句話說，什麼是 Nutritarian 飲食？",

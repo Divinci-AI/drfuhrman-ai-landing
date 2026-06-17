@@ -125,8 +125,6 @@ export const nl: UIStrings = {
     online: "Online",
     assistantLabel: "Assistent",
     recommendationPrefix: "Ik merkte dat je mogelijk geïnteresseerd bent in",
-    composerAria: "Stel je eigen vraag in de chat",
-    composerPlaceholder: "Stel de AI van Dr. Fuhrman je eigen vraag…",
     questions: [
       "Wat zijn de eerste drie stappen om met een Nutritarian-dieet te beginnen?",
       "Wat is een Nutritarian-dieet in één zin?",

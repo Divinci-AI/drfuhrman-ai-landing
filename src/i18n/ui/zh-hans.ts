@@ -123,8 +123,6 @@ export const zhHans: UIStrings = {
     online: "在线",
     assistantLabel: "助手",
     recommendationPrefix: "我注意到你可能对以下内容感兴趣",
-    composerAria: "在聊天中提出你自己的问题",
-    composerPlaceholder: "向 Dr. Fuhrman 的 AI 提出你自己的问题…",
     questions: [
       "开始 Nutritarian 饮食的前三个步骤是什么？",
       "用一句话说，什么是 Nutritarian 饮食？",

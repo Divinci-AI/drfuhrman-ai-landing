@@ -124,8 +124,6 @@ export const th: UIStrings = {
     online: "ออนไลน์",
     assistantLabel: "ผู้ช่วย",
     recommendationPrefix: "ฉันสังเกตว่าคุณอาจสนใจ",
-    composerAria: "ถามคำถามของคุณเองในแชท",
-    composerPlaceholder: "ถาม AI ของ Dr. Fuhrman ด้วยคำถามของคุณเอง…",
     questions: [
       "สามขั้นตอนแรกในการเริ่มกินแบบ Nutritarian คืออะไร?",
       "อธิบายอาหารแบบ Nutritarian ในประโยคเดียวว่าอย่างไร?",

@@ -176,8 +176,6 @@ export const en = {
     online: "Online",
     assistantLabel: "Assistant",
     recommendationPrefix: "I noticed you might be interested in",
-    composerAria: "Ask your own question in the chat",
-    composerPlaceholder: "Ask Dr. Fuhrman's AI your own question…",
     questions: [
       "What are the first three steps to start a Nutritarian diet?",
       "In one sentence, what is a Nutritarian diet?",

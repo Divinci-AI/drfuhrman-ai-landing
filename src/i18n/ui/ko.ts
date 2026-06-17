@@ -123,8 +123,6 @@ export const ko: UIStrings = {
     online: "온라인",
     assistantLabel: "어시스턴트",
     recommendationPrefix: "이것에 관심이 있으실 것 같았습니다",
-    composerAria: "채팅에서 직접 질문하기",
-    composerPlaceholder: "Dr. Fuhrman의 AI에게 직접 질문해 보세요…",
     questions: [
       "Nutritarian 식단을 시작하기 위한 처음 세 단계는 무엇인가요?",
       "한 문장으로, Nutritarian 식단이란 무엇인가요?",

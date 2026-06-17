@@ -67,23 +67,31 @@ function renderTosContent(text: string) {
     .split(/\n{2,}/)
     .map((b) => b.trim())
     .filter(Boolean);
+  const renderBold = (s: string) =>
+    s.split(/\*\*([^*]+)\*\*/g).map((part, j) =>
+      j % 2 === 1 ? (
+        <strong key={j} className="font-semibold">
+          {part}
+        </strong>
+      ) : (
+        part
+      ),
+    );
   return blocks.map((block, i) => {
-    const heading = block.match(/^(#{1,3})\s+(.*)$/);
-    const renderBold = (s: string) =>
-      s.split(/\*\*([^*]+)\*\*/g).map((part, j) =>
-        j % 2 === 1 ? (
-          <strong key={j} className="font-semibold">
-            {part}
-          </strong>
-        ) : (
-          part
-        ),
-      );
+    // A block may be a bare heading, OR a heading line immediately followed
+    // by its body (single newline) — the Divinci ToS ships the latter, so
+    // peel the first line off as the heading and render the rest as a
+    // paragraph rather than dumping the literal "##" into the text.
+    const heading = block.match(/^(#{1,3})\s+([^\n]+)\n?([\s\S]*)$/);
     if (heading) {
+      const body = heading[3].trim();
       return (
-        <p key={i} className="pt-1 font-semibold text-df-green-dark">
-          {renderBold(heading[2])}
-        </p>
+        <div key={i} className="space-y-1">
+          <p className="pt-1 font-semibold text-df-green-dark">
+            {renderBold(heading[2].trim())}
+          </p>
+          {body && <p>{renderBold(body)}</p>}
+        </div>
       );
     }
     return <p key={i}>{renderBold(block)}</p>;

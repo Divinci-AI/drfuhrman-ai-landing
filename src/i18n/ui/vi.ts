@@ -123,8 +123,6 @@ export const vi: UIStrings = {
     online: "Trực tuyến",
     assistantLabel: "Trợ lý",
     recommendationPrefix: "Tôi nhận thấy bạn có thể quan tâm đến",
-    composerAria: "Đặt câu hỏi của riêng bạn trong khung chat",
-    composerPlaceholder: "Hỏi AI của Dr. Fuhrman câu hỏi của riêng bạn…",
     questions: [
       "Ba bước đầu tiên để bắt đầu chế độ ăn Nutritarian là gì?",
       "Trong một câu, chế độ ăn Nutritarian là gì?",

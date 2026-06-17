@@ -125,8 +125,6 @@ export const fa: UIStrings = {
     online: "آنلاین",
     assistantLabel: "دستیار",
     recommendationPrefix: "متوجه شدم شاید به این علاقه‌مند باشید",
-    composerAria: "پرسش خود را در گفت‌وگو بپرسید",
-    composerPlaceholder: "پرسش خود را از هوش مصنوعی Dr. Fuhrman بپرسید…",
     questions: [
       "سه گام نخست برای شروع رژیم Nutritarian چیست؟",
       "در یک جمله، رژیم Nutritarian چیست؟",

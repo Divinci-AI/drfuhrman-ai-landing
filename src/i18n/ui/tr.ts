@@ -126,8 +126,6 @@ export const tr: UIStrings = {
     online: "Çevrimiçi",
     assistantLabel: "Asistan",
     recommendationPrefix: "İlginizi çekebileceğini fark ettim",
-    composerAria: "Sohbette kendi sorunuzu sorun",
-    composerPlaceholder: "Dr. Fuhrman'ın yapay zekasına kendi sorunuzu sorun…",
     questions: [
       "Bir Nutritarian diyetine başlamak için ilk üç adım nedir?",
       "Tek cümleyle, Nutritarian diyeti nedir?",

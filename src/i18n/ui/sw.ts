@@ -124,8 +124,6 @@ export const sw: UIStrings = {
     online: "Mtandaoni",
     assistantLabel: "Msaidizi",
     recommendationPrefix: "Niligundua huenda ungependezwa na",
-    composerAria: "Uliza swali lako mwenyewe katika gumzo",
-    composerPlaceholder: "Uliza AI ya Dr. Fuhrman swali lako mwenyewe…",
     questions: [
       "Ni hatua zipi tatu za kwanza za kuanza mlo wa Nutritarian?",
       "Kwa sentensi moja, mlo wa Nutritarian ni nini?",
