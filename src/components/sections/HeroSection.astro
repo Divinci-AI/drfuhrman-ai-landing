@@ -100,7 +100,10 @@ const t = getUI(lang).hero;
         .chat-glass {
           inset: auto;
           left: 50%;
-          top: 50%;
+          /* Sit the orb a touch higher than the content's centre so the
+             conversation rides lower on the circle — keeps the welcome
+             bubble inside the orb instead of floating above its top arc. */
+          top: 44%;
           transform: translate(-50%, -50%);
           width: 100%;
           height: auto;
@@ -447,7 +450,7 @@ const t = getUI(lang).hero;
 
     <div class="chat-panel-wrapper relative mt-8 w-full md:mt-[3.875rem]">
       <div class="chat-glass"></div>
-      <div class="relative z-10 mt-2 md:mt-[44px]">
+      <div class="relative z-10 mt-2 md:mt-[72px]">
         <ChatIsland client:load lang={lang} />
       </div>
     </div>
