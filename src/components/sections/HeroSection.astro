@@ -19,7 +19,7 @@ const t = getUI(lang).hero;
        viewport edges and so the title sits cleanly above it. -->
   <div
     id="hero-bg"
-    class="pointer-events-none absolute hidden translate-y-[22px] transition-opacity duration-1000 ease-out md:block md:inset-x-[10.5rem] md:inset-y-[7.5rem]"
+    class="pointer-events-none absolute hidden translate-y-[7px] transition-opacity duration-1000 ease-out md:block md:inset-x-[10.5rem] md:inset-y-[7.5rem]"
     aria-hidden="true"
   >
     <img
@@ -104,7 +104,8 @@ const t = getUI(lang).hero;
              conversation rides lower on the circle — keeps the welcome
              bubble inside the orb instead of floating above its top arc. */
           top: 44%;
-          transform: translate(-50%, -50%);
+          /* …and nudged up another 15px with the background poster. */
+          transform: translate(-50%, calc(-50% - 15px));
           width: 100%;
           height: auto;
           aspect-ratio: 1 / 1;
@@ -130,6 +131,11 @@ const t = getUI(lang).hero;
             rgba(0, 0, 0, 0.55) 9%,
             black 19%
           );
+        }
+        /* Seat the conversation higher inside the circle (pre-send only —
+           the active card grows flush, so it keeps its own offset). */
+        .chat-panel-wrapper:not(.chat-active) > .relative.z-10 {
+          transform: translateY(-37px);
         }
       }
 
