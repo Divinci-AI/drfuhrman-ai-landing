@@ -125,8 +125,6 @@ export const ur: UIStrings = {
     online: "آن لائن",
     assistantLabel: "معاون",
     recommendationPrefix: "میں نے محسوس کیا کہ شاید آپ اس میں دلچسپی رکھتے ہوں",
-    composerAria: "چیٹ میں اپنا سوال پوچھیں",
-    composerPlaceholder: "Dr. Fuhrman کی مصنوعی ذہانت سے اپنا سوال پوچھیں…",
     questions: [
       "Nutritarian غذا شروع کرنے کے پہلے تین اقدامات کیا ہیں؟",
       "ایک جملے میں، Nutritarian غذا کیا ہے؟",

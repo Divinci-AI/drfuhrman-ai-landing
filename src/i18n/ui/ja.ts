@@ -123,8 +123,6 @@ export const ja: UIStrings = {
     online: "オンライン",
     assistantLabel: "アシスタント",
     recommendationPrefix: "こちらにご興味があるかもしれないと思いました",
-    composerAria: "チャットで自分の質問をする",
-    composerPlaceholder: "Dr. Fuhrman AIに自分の質問をしてみましょう…",
     questions: [
       "Nutritarianの食事を始めるための最初の3つのステップは何ですか？",
       "一文で言うと、Nutritarianの食事とは何ですか？",

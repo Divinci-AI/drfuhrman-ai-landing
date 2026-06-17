@@ -126,8 +126,6 @@ export const el: UIStrings = {
     online: "Σε σύνδεση",
     assistantLabel: "Βοηθός",
     recommendationPrefix: "Παρατήρησα ότι ίσως σας ενδιαφέρει",
-    composerAria: "Κάντε τη δική σας ερώτηση στη συνομιλία",
-    composerPlaceholder: "Κάντε στην AI του Dr. Fuhrman τη δική σας ερώτηση…",
     questions: [
       "Ποια είναι τα πρώτα τρία βήματα για να ξεκινήσω μια διατροφή Nutritarian;",
       "Σε μία πρόταση, τι είναι μια διατροφή Nutritarian;",

@@ -21,6 +21,7 @@
 import { getUI } from "~/i18n";
 import { cleanContextTitle } from "~/lib/clean-context-title";
 import { DEFAULT_LOCALE } from "~/i18n/locales";
+import { ShowcaseChat } from "~/components/chat/ShowcaseChat";
 
 interface Props {
   lang?: string;
@@ -147,7 +148,7 @@ function citeTitle(ex: Exchange, n: number): string {
         <span
           class="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-df-green-leaf/20 ring-1 ring-df-green-dark/15"
         >
-          <img src="/drfuhrman-logo.svg" alt="" aria-hidden="true" class="h-4 w-4" width="16" height="16" />
+          <img src="/drfuhrman-logo.svg" alt="" aria-hidden="true" class="h-4 w-4" width="16" height="16" data-df-avatar />
         </span>
         <span class="font-semibold text-df-green-dark">Dr. Fuhrman AI</span>
         <span class="ml-auto inline-flex items-center gap-1.5 text-xs text-gray-500">
@@ -159,12 +160,17 @@ function citeTitle(ex: Exchange, n: number): string {
         </span>
       </div>
 
-      {/* Scrollable messages */}
-      <div class="df-chat-scroll h-[26rem] space-y-5 overflow-y-auto px-4 py-5 md:h-[32rem] md:px-6">
+      {/* Interactive in-place chat: the example messages below are a demo
+          shown until the visitor sends — then ShowcaseChat swaps in their
+          own FRESH conversation (the example is never part of it) and renders
+          the email-gated composer. */}
+      <ShowcaseChat client:visible lang={lang}>
+        {/* Scrollable example messages (the demo) */}
+        <div class="df-chat-scroll h-[26rem] space-y-5 overflow-y-auto px-4 py-5 md:h-[32rem] md:px-6">
         {/* Opening greeting */}
         <div class="flex items-start gap-2">
           <span class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-df-green-leaf/20 ring-1 ring-df-green-dark/15">
-            <img src="/drfuhrman-logo.svg" alt="" aria-hidden="true" class="h-4 w-4" width="16" height="16" />
+            <img src="/drfuhrman-logo.svg" alt="" aria-hidden="true" class="h-4 w-4" width="16" height="16" data-df-avatar />
           </span>
           <p class="max-w-[88%] rounded-2xl rounded-tl-sm bg-white px-4 py-2.5 text-sm leading-relaxed text-df-text shadow-sm md:text-base">
             {welcomeMessage}
@@ -194,7 +200,7 @@ function citeTitle(ex: Exchange, n: number): string {
               {/* Assistant answer */}
               <div class="flex items-start gap-2">
                 <span class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-df-green-leaf/20 ring-1 ring-df-green-dark/15">
-                  <img src="/drfuhrman-logo.svg" alt="" aria-hidden="true" class="h-4 w-4" width="16" height="16" />
+                  <img src="/drfuhrman-logo.svg" alt="" aria-hidden="true" class="h-4 w-4" width="16" height="16" data-df-avatar />
                 </span>
                 <div class="max-w-[88%]">
                   <div class="space-y-2 rounded-2xl rounded-tl-sm bg-df-green-leaf/15 px-4 py-3 text-sm leading-relaxed text-df-text md:text-base">
@@ -243,30 +249,8 @@ function citeTitle(ex: Exchange, n: number): string {
             </>
           ))
         }
-      </div>
-
-      {/* Decoy composer — clicking jumps to the real hero chat */}
-      <div class="border-t border-df-green-dark/10 bg-white/70 p-3 backdrop-blur-sm">
-        <button
-          type="button"
-          id="df-transcript-cta"
-          aria-label={t.composerAria}
-          class="group flex w-full items-center gap-2 rounded-full border border-df-green-dark/20 bg-white px-4 py-2.5 text-left transition hover:border-df-green-dark hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-df-green-dark/40"
-        >
-          <span class="flex-1 truncate text-sm text-gray-400 group-hover:text-gray-500">
-            {t.composerPlaceholder}
-          </span>
-          <span
-            aria-hidden="true"
-            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-df-green-dark/90 text-white transition group-hover:bg-df-green-mid"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-4 w-4">
-              <path d="M22 2 11 13" stroke-linecap="round" stroke-linejoin="round"></path>
-              <path d="M22 2 15 22l-4-9-9-4 20-7Z" stroke-linecap="round" stroke-linejoin="round"></path>
-            </svg>
-          </span>
-        </button>
-      </div>
+        </div>
+      </ShowcaseChat>
     </div>
 
     <p class="mt-6 text-center text-xs text-gray-400">
@@ -276,15 +260,6 @@ function citeTitle(ex: Exchange, n: number): string {
 </section>
 
 <script>
-  import { scrollToHeroChat } from "~/lib/scroll-to-hero";
-
-  // The decoy composer scrolls the visitor up into the real hero chat,
-  // centered, and focuses the email field so they can start a message.
-  const cta = document.getElementById("df-transcript-cta");
-  cta?.addEventListener("click", () => {
-    scrollToHeroChat({ focusEmail: true });
-  });
-
   // Touch devices have no hover — tap a citation to toggle its tooltip.
   document.querySelectorAll<HTMLElement>(".df-cite").forEach((cite) => {
     cite.addEventListener("click", (e) => {
@@ -292,6 +267,26 @@ function citeTitle(ex: Exchange, n: number): string {
       cite.focus();
     });
   });
+
+  // Release avatar — progressive enhancement. The markup ships the static
+  // logo so the showcase reads with no JS; once /api/release-meta resolves
+  // (worker-only; null under plain `astro dev`), swap in the Release's
+  // uploaded picture so it matches the live chat's assistant avatar.
+  fetch("/api/release-meta")
+    .then((r) => (r.ok ? r.json() : null))
+    .then((d: { avatarUrl?: string | null } | null) => {
+      const url = d && typeof d.avatarUrl === "string" ? d.avatarUrl : null;
+      if (!url) return;
+      document
+        .querySelectorAll<HTMLImageElement>("img[data-df-avatar]")
+        .forEach((img) => {
+          img.src = url;
+          img.className = "h-full w-full object-cover";
+          img.removeAttribute("width");
+          img.removeAttribute("height");
+        });
+    })
+    .catch(() => {});
 </script>
 
 <style>

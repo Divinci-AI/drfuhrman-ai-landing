@@ -123,8 +123,6 @@ export const id: UIStrings = {
     online: "Daring",
     assistantLabel: "Asisten",
     recommendationPrefix: "Saya perhatikan Anda mungkin tertarik pada",
-    composerAria: "Ajukan pertanyaan Anda sendiri di obrolan",
-    composerPlaceholder: "Tanyakan pertanyaan Anda sendiri kepada AI Dr. Fuhrman…",
     questions: [
       "Apa tiga langkah pertama untuk memulai pola makan Nutritarian?",
       "Dalam satu kalimat, apa itu pola makan Nutritarian?",

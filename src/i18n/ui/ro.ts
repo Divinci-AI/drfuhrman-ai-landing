@@ -126,8 +126,6 @@ export const ro: UIStrings = {
     online: "Online",
     assistantLabel: "Asistent",
     recommendationPrefix: "Am observat că te-ar putea interesa",
-    composerAria: "Pune-ți propria întrebare în chat",
-    composerPlaceholder: "Pune AI-ului Dr. Fuhrman propria ta întrebare…",
     questions: [
       "Care sunt primii trei pași pentru a începe o dietă Nutritarian?",
       "Într-o singură propoziție, ce este o dietă Nutritarian?",

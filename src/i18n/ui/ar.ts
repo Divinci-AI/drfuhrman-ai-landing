@@ -125,8 +125,6 @@ export const ar: UIStrings = {
     online: "متصل",
     assistantLabel: "المساعد",
     recommendationPrefix: "لاحظت أنك قد تكون مهتمًا بـ",
-    composerAria: "اطرح سؤالك الخاص في المحادثة",
-    composerPlaceholder: "اطرح على الذكاء الاصطناعي الخاص بـ Dr. Fuhrman سؤالك الخاص…",
     questions: [
       "ما هي الخطوات الثلاث الأولى لبدء نظام Nutritarian الغذائي؟",
       "في جملة واحدة، ما هو نظام Nutritarian الغذائي؟",

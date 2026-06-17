@@ -125,8 +125,6 @@ export const pa: UIStrings = {
     online: "ਆਨਲਾਈਨ",
     assistantLabel: "ਸਹਾਇਕ",
     recommendationPrefix: "ਮੈਨੂੰ ਲੱਗਿਆ ਕਿ ਤੁਹਾਨੂੰ ਇਸ ਵਿੱਚ ਦਿਲਚਸਪੀ ਹੋ ਸਕਦੀ ਹੈ",
-    composerAria: "ਚੈਟ ਵਿੱਚ ਆਪਣਾ ਸਵਾਲ ਪੁੱਛੋ",
-    composerPlaceholder: "Dr. Fuhrman AI ਨੂੰ ਆਪਣਾ ਸਵਾਲ ਪੁੱਛੋ…",
     questions: [
       "Nutritarian ਖ਼ੁਰਾਕ ਸ਼ੁਰੂ ਕਰਨ ਦੇ ਪਹਿਲੇ ਤਿੰਨ ਕਦਮ ਕਿਹੜੇ ਹਨ?",
       "ਇੱਕ ਵਾਕ ਵਿੱਚ, Nutritarian ਖ਼ੁਰਾਕ ਕੀ ਹੈ?",

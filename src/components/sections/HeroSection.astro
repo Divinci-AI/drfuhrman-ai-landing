@@ -76,7 +76,14 @@ const t = getUI(lang).hero;
       /* Email label + member-login chip — same frosted tint as the orb,
          kept extremely subtle so the text reads without a heavy pill. */
       .chat-glass-chip {
-        background-image: var(--chat-glass-gradient);
+        /* No backing by default. On the resting frosted orb the label text
+           reads fine, and a white pill behind every label just looks noisy.
+           The highlight is applied ONLY while the orb is hovered (below) —
+           that's when the orb opens a transparent window onto the busy
+           botanical background and the text actually needs the legibility
+           boost. */
+        background: transparent;
+        transition: background-color 0.25s ease;
       }
       @media (min-width: 768px) {
         .chat-panel-wrapper {
@@ -104,6 +111,22 @@ const t = getUI(lang).hero;
           box-shadow: var(--chat-glass-shadow);
           backdrop-filter: blur(12px) saturate(1.25) contrast(1.05);
           -webkit-backdrop-filter: blur(12px) saturate(1.25) contrast(1.05);
+          /* Fade the orb's top crown to transparent so the botanical art
+             that sits there (the broccoli caduceus) reads through sharply
+             instead of being frosted over. Only the top sliver fades; the
+             body of the orb stays fully frosted for legibility. */
+          -webkit-mask-image: linear-gradient(
+            to bottom,
+            transparent 1%,
+            rgba(0, 0, 0, 0.55) 9%,
+            black 19%
+          );
+          mask-image: linear-gradient(
+            to bottom,
+            transparent 1%,
+            rgba(0, 0, 0, 0.55) 9%,
+            black 19%
+          );
         }
       }
 
@@ -302,6 +325,14 @@ const t = getUI(lang).hero;
         .chat-panel-wrapper:hover .welcome-bubble {
           background-color: rgba(220, 234, 220, 0.85) !important;
         }
+        /* Frosted highlight behind the chips — only while the orb is hovered
+           (and thus partly transparent), to keep the labels legible over the
+           revealed background. Resting state stays clean (see .chat-glass-chip). */
+        .chat-panel-wrapper:hover .chat-glass-chip {
+          background: rgba(255, 255, 255, 0.55);
+          backdrop-filter: blur(4px);
+          -webkit-backdrop-filter: blur(4px);
+        }
         .chat-panel-wrapper:hover .chat-glass {
           -webkit-mask-image: radial-gradient(
             circle 160px at var(--orb-x) var(--orb-y),
@@ -416,7 +447,7 @@ const t = getUI(lang).hero;
 
     <div class="chat-panel-wrapper relative mt-8 w-full md:mt-[3.875rem]">
       <div class="chat-glass"></div>
-      <div class="relative z-10 mt-2 md:mt-[75px]">
+      <div class="relative z-10 mt-2 md:mt-[44px]">
         <ChatIsland client:load lang={lang} />
       </div>
     </div>

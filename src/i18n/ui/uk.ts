@@ -125,8 +125,6 @@ export const uk: UIStrings = {
     online: "У мережі",
     assistantLabel: "Асистент",
     recommendationPrefix: "Я помітив, що вас може зацікавити",
-    composerAria: "Поставте своє запитання в чаті",
-    composerPlaceholder: "Поставте ШІ Dr. Fuhrman своє власне запитання…",
     questions: [
       "Які перші три кроки потрібно зробити, щоб почати дієту Nutritarian?",
       "В одному реченні: що таке дієта Nutritarian?",

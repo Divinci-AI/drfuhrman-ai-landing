@@ -125,8 +125,6 @@ export const hi: UIStrings = {
     online: "ऑनलाइन",
     assistantLabel: "सहायक",
     recommendationPrefix: "मैंने देखा कि शायद आपकी इसमें रुचि हो",
-    composerAria: "चैट में अपना खुद का प्रश्न पूछें",
-    composerPlaceholder: "Dr. Fuhrman AI से अपना खुद का प्रश्न पूछें…",
     questions: [
       "Nutritarian आहार शुरू करने के पहले तीन कदम क्या हैं?",
       "एक वाक्य में, Nutritarian आहार क्या है?",

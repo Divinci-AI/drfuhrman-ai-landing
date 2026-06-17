@@ -7,10 +7,17 @@ import { Transcript, type TranscriptMessage } from "./Transcript";
 import { MessageInput } from "./MessageInput";
 import { StickyChatBar } from "./StickyChatBar";
 import { SignupCTA } from "./SignupCTA";
+import { TermsModal } from "./TermsModal";
 
 import { isDisposableEmail } from "../../lib/disposable-emails";
 import { getLocaleMeta, DEFAULT_LOCALE } from "../../i18n/locales";
 import { getUI } from "../../i18n";
+import { withRef } from "../../lib/links";
+import { scrollToHeroChat } from "../../lib/scroll-to-hero";
+
+// Legal links shown under the chat disclaimer (canonical Divinci pages).
+const TERMS_URL = withRef("https://divinci.ai/terms-of-service/", "hero-disclaimer");
+const PRIVACY_URL = withRef("https://divinci.ai/privacy-policy/", "hero-disclaimer");
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // A disposable email is NOT valid for the gate — keeps the email gate
@@ -88,6 +95,110 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
   const [focusSignal, setFocusSignal] = useState(0);
 
   const handleSendRef = useRef<(text: string) => void>(() => {});
+
+  // ── Conversation-starter "type-ahead" preview ───────────────────────
+  // Hovering a starter pill types its text into the composer, character by
+  // character, so it looks like the cursor is live in the chat box. Moving
+  // away clears it. Real keystrokes always win and are never clobbered.
+  const previewTimerRef = useRef<number | null>(null);
+  const previewingRef = useRef(false);
+  const userTypedRef = useRef(false);
+  const pendingRef = useRef(false);
+  pendingRef.current = pending;
+
+  const stopPreviewTimer = useCallback(() => {
+    if (previewTimerRef.current !== null) {
+      clearInterval(previewTimerRef.current);
+      previewTimerRef.current = null;
+    }
+  }, []);
+
+  // Wraps setDraft for the composer: a real keystroke cancels any running
+  // preview and hands ownership of the field to the visitor.
+  const handleDraftChange = useCallback(
+    (s: string) => {
+      stopPreviewTimer();
+      previewingRef.current = false;
+      userTypedRef.current = s.trim().length > 0;
+      setDraft(s);
+    },
+    [stopPreviewTimer],
+  );
+
+  const previewStarter = useCallback(
+    (text: string) => {
+      // Desktop-only flourish; never overwrite text the visitor typed.
+      if (pendingRef.current || userTypedRef.current) return;
+      if (
+        typeof window !== "undefined" &&
+        window.matchMedia &&
+        !window.matchMedia("(hover: hover)").matches
+      ) {
+        return;
+      }
+      stopPreviewTimer();
+      previewingRef.current = true;
+      setFocusSignal((n) => n + 1); // focus the textarea so the caret blinks
+      let i = 0;
+      previewTimerRef.current = window.setInterval(() => {
+        i += 1;
+        setDraft(text.slice(0, i));
+        if (i >= text.length) stopPreviewTimer();
+      }, 24);
+    },
+    [stopPreviewTimer],
+  );
+
+  const clearStarterPreview = useCallback(() => {
+    if (!previewingRef.current) return;
+    stopPreviewTimer();
+    previewingRef.current = false;
+    setDraft("");
+  }, [stopPreviewTimer]);
+
+  // Tidy the interval if the island unmounts mid-preview.
+  useEffect(() => stopPreviewTimer, [stopPreviewTimer]);
+
+  // Auto-focus the hero composer on landing — but only on pointer devices,
+  // so a phone visitor doesn't get the on-screen keyboard thrown up the
+  // instant the page loads. The visitor must land at the very top (logo +
+  // hero fully in view), so we pin the scroll position around the focus:
+  // even with preventScroll some browsers still nudge the page, so we
+  // capture the current offset and restore it if the focus moved it.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.matchMedia && !window.matchMedia("(hover: hover)").matches) {
+      return;
+    }
+    const y = window.scrollY;
+    setFocusSignal((n) => n + 1);
+    // The focus runs a tick later (MessageInput's effect). Pin the scroll
+    // back to where the visitor landed in case the focus nudged it, across
+    // a few frames so we catch it whenever it commits.
+    const pin = () => {
+      if (window.scrollY !== y) window.scrollTo(0, y);
+    };
+    const r = requestAnimationFrame(pin);
+    const t1 = window.setTimeout(pin, 0);
+    const t2 = window.setTimeout(pin, 80);
+    return () => {
+      cancelAnimationFrame(r);
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, []);
+
+  // Sticky bar → "bring me to the chat": focus the hero composer, THEN
+  // scroll the orb into view. Order matters — focusing (preventScroll, so it
+  // doesn't jump) must happen before the smooth scroll, otherwise a late
+  // focus call cancels the in-flight scroll. Falls back to focusSignal if the
+  // gate textarea isn't mounted (e.g. mid-conversation compact composer).
+  const focusHeroComposer = useCallback(() => {
+    const ta = document.getElementById("df-question-input");
+    if (ta instanceof HTMLElement) ta.focus({ preventScroll: true });
+    else setFocusSignal((n) => n + 1);
+    scrollToHeroChat();
+  }, []);
 
   // Stable per-visitor session id (held in a ref so it's available
   // synchronously in send/feedback without re-render churn). Restored from
@@ -463,12 +574,18 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
     <div className="flex flex-col gap-5">
       {showStarters && (
         <>
-          <WelcomeMessage text={serverWelcome ?? t.welcomeMessage} />
+          <WelcomeMessage text={serverWelcome ?? t.welcomeMessage} avatarUrl={avatarUrl} />
           <ConversationStarters
             label={t.tryAsking}
             starters={t.starters}
             disabled={pending}
+            onPreview={previewStarter}
+            onPreviewEnd={clearStarterPreview}
             onSelect={(text) => {
+              // A click commits the preview — stop the typewriter and claim
+              // the field so the trailing mouseleave doesn't wipe it.
+              stopPreviewTimer();
+              previewingRef.current = false;
               // If the visitor already has a valid email, send the starter
               // immediately — one tap, no extra "Ask" click (starters are
               // cheap/cached and use a separate budget, so this doesn't
@@ -478,6 +595,7 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
               if (isValidEmail(email)) {
                 handleSend(text, { starter: true });
               } else {
+                userTypedRef.current = true;
                 setDraft(text);
                 setFocusSignal((n) => n + 1);
               }
@@ -535,7 +653,7 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
                 onEmailChange={setEmail}
                 emailRequired={emailRequired}
                 draft={draft}
-                onDraftChange={setDraft}
+                onDraftChange={handleDraftChange}
                 focusSignal={focusSignal}
                 onSend={handleSend}
                 pending={pending}
@@ -566,6 +684,25 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
         <br />
         {t.disclaimer[2]}
       </p>
+      <p className="text-center text-xs text-gray-500">
+        <a
+          href={PRIVACY_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline underline-offset-2 hover:text-df-green-dark"
+        >
+          {getUI(lang).footer.privacy}
+        </a>
+        <span className="px-1.5 text-gray-400">·</span>
+        <a
+          href={TERMS_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline underline-offset-2 hover:text-df-green-dark"
+        >
+          {getUI(lang).footer.terms}
+        </a>
+      </p>
       {error && <p className="text-xs text-red-600">{error}</p>}
     </div>
     {/* Sticky composer — shares this island's state (email/draft/quota) and
@@ -576,10 +713,11 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
       lang={lang}
       emailRequired={emailRequired}
       draft={draft}
-      onDraftChange={setDraft}
+      onDraftChange={handleDraftChange}
       onSend={handleSend}
       pending={pending}
       quotaExhausted={quotaExhausted}
+      onRequestHeroFocus={focusHeroComposer}
     />
     {tosGate && (
       <TermsModal
@@ -596,94 +734,4 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
     )}
     </>
   );
-}
-
-/**
- * Terms-of-Service / medical-disclaimer acceptance modal. Shown when the
- * release gates chat behind a published ToS version. Renders the document's
- * markdown with a deliberately tiny formatter (headings + bold + paragraphs —
- * same no-dependency approach as the transcript renderer).
- */
-function TermsModal({
-  title,
-  content,
-  busy,
-  error,
-  onAgree,
-  onClose,
-}: {
-  title: string;
-  content: string;
-  busy: boolean;
-  error: string | null;
-  onAgree: () => void;
-  onClose: () => void;
-}) {
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
-      role="dialog"
-      aria-modal="true"
-      aria-label={title}
-    >
-      <div className="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-df-green-dark/15 bg-white shadow-2xl">
-        <div className="border-b border-df-green-dark/10 bg-df-green-leaf/10 px-5 py-3">
-          <h2 className="text-base font-semibold text-df-green-dark">{title}</h2>
-        </div>
-        <div className="df-chat-scroll flex-1 space-y-2 overflow-y-auto px-5 py-4 text-sm leading-relaxed text-df-text">
-          {renderTosContent(content)}
-        </div>
-        <div className="border-t border-df-green-dark/10 bg-white/90 px-5 py-3">
-          {error && <p className="mb-2 text-xs text-red-600">{error}</p>}
-          <div className="flex items-center justify-end gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-lg px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700"
-            >
-              Not now
-            </button>
-            <button
-              type="button"
-              onClick={onAgree}
-              disabled={busy}
-              className="rounded-lg bg-df-green-dark px-4 py-1.5 text-sm font-medium text-white transition hover:bg-df-green-mid disabled:opacity-60"
-            >
-              {busy ? "Saving…" : "I Agree"}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/** Markdown-lite for the ToS body: #/##/### headings, **bold**, paragraphs. */
-function renderTosContent(text: string) {
-  const blocks = text
-    .replace(/\r\n/g, "\n")
-    .split(/\n{2,}/)
-    .map((b) => b.trim())
-    .filter(Boolean);
-  return blocks.map((block, i) => {
-    const heading = block.match(/^(#{1,3})\s+(.*)$/);
-    const renderBold = (s: string) =>
-      s.split(/\*\*([^*]+)\*\*/g).map((part, j) =>
-        j % 2 === 1 ? (
-          <strong key={j} className="font-semibold">
-            {part}
-          </strong>
-        ) : (
-          part
-        ),
-      );
-    if (heading) {
-      return (
-        <p key={i} className="pt-1 font-semibold text-df-green-dark">
-          {renderBold(heading[2])}
-        </p>
-      );
-    }
-    return <p key={i}>{renderBold(block)}</p>;
-  });
 }

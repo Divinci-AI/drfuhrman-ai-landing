@@ -23,6 +23,9 @@ interface StickyChatBarProps {
   /** True once the visitor has spent their free message — swap the input for
    *  a compact sign-up nudge instead of an unusable field. */
   quotaExhausted: boolean;
+  /** Clicking/focusing the sticky field jumps the visitor up to the hero
+   *  composer (scroll + focus) instead of typing in place. */
+  onRequestHeroFocus?: () => void;
 }
 
 export function StickyChatBar({
@@ -33,6 +36,7 @@ export function StickyChatBar({
   onSend,
   pending,
   quotaExhausted,
+  onRequestHeroFocus,
 }: StickyChatBarProps) {
   const ui = getUI(lang);
   const t = ui.chat;
@@ -153,6 +157,20 @@ export function StickyChatBar({
                 value={draft}
                 onChange={(e) => onDraftChange(e.target.value)}
                 onKeyDown={handleKeyDown}
+                // Tapping the sticky field whisks the visitor up to the hero
+                // composer (where the email gate lives) and focuses it,
+                // rather than letting them type down here. preventDefault on
+                // mousedown stops this field from grabbing focus first;
+                // onFocus covers keyboard/tab entry.
+                onMouseDown={
+                  onRequestHeroFocus
+                    ? (e) => {
+                        e.preventDefault();
+                        onRequestHeroFocus();
+                      }
+                    : undefined
+                }
+                onFocus={onRequestHeroFocus}
                 maxLength={MAX_MESSAGE_LEN}
                 aria-label={t.questionAriaLabel}
                 placeholder={t.questionPlaceholderSticky}

@@ -125,8 +125,6 @@ export const ta: UIStrings = {
     online: "ஆன்லைனில்",
     assistantLabel: "உதவியாளர்",
     recommendationPrefix: "உங்களுக்கு இதில் ஆர்வம் இருக்கலாம் என்று நான் கவனித்தேன்",
-    composerAria: "அரட்டையில் உங்கள் சொந்தக் கேள்வியைக் கேளுங்கள்",
-    composerPlaceholder: "Dr. Fuhrman AI-யிடம் உங்கள் சொந்தக் கேள்வியைக் கேளுங்கள்…",
     questions: [
       "Nutritarian உணவுமுறையைத் தொடங்குவதற்கான முதல் மூன்று படிகள் என்ன?",
       "ஒரே வாக்கியத்தில், Nutritarian உணவுமுறை என்றால் என்ன?",

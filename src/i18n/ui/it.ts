@@ -126,8 +126,6 @@ export const it: UIStrings = {
     online: "Online",
     assistantLabel: "Assistente",
     recommendationPrefix: "Ho notato che potrebbe interessarti",
-    composerAria: "Fai la tua domanda nella chat",
-    composerPlaceholder: "Fai all'IA di Dr. Fuhrman la tua domanda…",
     questions: [
       "Quali sono i primi tre passi per iniziare una dieta Nutritarian?",
       "In una frase, che cos'è una dieta Nutritarian?",

@@ -125,8 +125,6 @@ export const te: UIStrings = {
     online: "ఆన్‌లైన్‌లో",
     assistantLabel: "సహాయకుడు",
     recommendationPrefix: "మీకు బహుశా దీనిపై ఆసక్తి ఉండవచ్చని నేను గమనించాను",
-    composerAria: "చాట్‌లో మీ సొంత ప్రశ్నను అడగండి",
-    composerPlaceholder: "Dr. Fuhrman AI ని మీ సొంత ప్రశ్నను అడగండి…",
     questions: [
       "Nutritarian ఆహారాన్ని మొదలుపెట్టడానికి మొదటి మూడు అడుగులు ఏమిటి?",
       "ఒక్క వాక్యంలో, Nutritarian ఆహారం అంటే ఏమిటి?",

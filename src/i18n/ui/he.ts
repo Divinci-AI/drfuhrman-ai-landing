@@ -125,8 +125,6 @@ export const he: UIStrings = {
     online: "מחובר",
     assistantLabel: "עוזר",
     recommendationPrefix: "שמתי לב שאולי יעניין אותך",
-    composerAria: "שאלו את שאלתכם בצ׳אט",
-    composerPlaceholder: "שאלו את הבינה המלאכותית של Dr. Fuhrman את שאלתכם…",
     questions: [
       "מהם שלושת הצעדים הראשונים להתחיל תזונת Nutritarian?",
       "במשפט אחד, מהי תזונת Nutritarian?",

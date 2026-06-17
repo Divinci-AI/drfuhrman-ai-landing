@@ -125,8 +125,6 @@ export const zu: UIStrings = {
     online: "Ku-inthanethi",
     assistantLabel: "Umsizi",
     recommendationPrefix: "Ngiqaphele ukuthi mhlawumbe ungathanda",
-    composerAria: "Buza owakho umbuzo engxoxweni",
-    composerPlaceholder: "Buza i-AI ka-Dr. Fuhrman owakho umbuzo…",
     questions: [
       "Yiziphi izinyathelo ezintathu zokuqala zokuqalisa ukudla kwe-Nutritarian?",
       "Ngomusho owodwa, kuyini ukudla kwe-Nutritarian?",

@@ -126,8 +126,6 @@ export const cs: UIStrings = {
     online: "Online",
     assistantLabel: "Asistent",
     recommendationPrefix: "Všiml jsem si, že by vás mohlo zajímat",
-    composerAria: "Položte vlastní otázku v chatu",
-    composerPlaceholder: "Položte AI Dr. Fuhrmana vlastní otázku…",
     questions: [
       "Jaké jsou první tři kroky k zahájení diety Nutritarian?",
       "Co je dieta Nutritarian v jedné větě?",

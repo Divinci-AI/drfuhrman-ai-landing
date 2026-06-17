@@ -123,8 +123,6 @@ export const fil: UIStrings = {
     online: "Online",
     assistantLabel: "Assistant",
     recommendationPrefix: "Napansin ko na maaaring interesado ka sa",
-    composerAria: "Magtanong ng sarili mong tanong sa chat",
-    composerPlaceholder: "Tanungin ang Dr. Fuhrman's AI ng iyong sariling tanong…",
     questions: [
       "Ano ang unang tatlong hakbang para magsimula ng Nutritarian na diyeta?",
       "Sa isang pangungusap, ano ang Nutritarian na diyeta?",

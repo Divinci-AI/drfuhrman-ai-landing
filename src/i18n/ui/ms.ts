@@ -123,8 +123,6 @@ export const ms: UIStrings = {
     online: "Dalam talian",
     assistantLabel: "Pembantu",
     recommendationPrefix: "Saya perasan anda mungkin berminat dengan",
-    composerAria: "Tanyakan soalan anda sendiri dalam sembang",
-    composerPlaceholder: "Tanya AI Dr. Fuhrman soalan anda sendiri…",
     questions: [
       "Apakah tiga langkah pertama untuk memulakan diet Nutritarian?",
       "Dalam satu ayat, apakah itu diet Nutritarian?",

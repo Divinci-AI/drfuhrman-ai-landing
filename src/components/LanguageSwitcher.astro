@@ -45,17 +45,25 @@ function hrefFor(code: string): string {
     aria-label={switcherLabel}
     title={switcherLabel}
   >
-    <svg
-      class="h-5 w-5"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="12" r="10"></circle>
-      <path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"></path>
-    </svg>
+    {/* Resting state: the globe. On hover it spins away and four scripts
+        flip through in its place to signal "switch language". */}
+    <span class="df-globe-stage" aria-hidden="true">
+      <svg
+        class="df-globe h-5 w-5"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <circle cx="12" cy="12" r="10"></circle>
+        <path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"></path>
+      </svg>
+      <span class="df-lang-glyphs">
+        <span>あ</span>
+        <span>中</span>
+        <span>ع</span>
+      </span>
+    </span>
     <span class="sr-only">{switcherLabel}: {current.autonym}</span>
   </summary>
 
@@ -85,6 +93,110 @@ function hrefFor(code: string): string {
     }
   </ul>
 </details>
+
+<style>
+  /* The globe and the cycling glyphs share one centered stage so they can
+     cross-fade in place. */
+  .df-globe-stage {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+  .df-globe-stage > * {
+    grid-area: 1 / 1;
+  }
+  .df-globe {
+    transition:
+      opacity 0.25s ease,
+      transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .df-lang-glyphs {
+    position: relative;
+    display: grid;
+    place-items: center;
+    font-weight: 700;
+    font-size: 0.95rem;
+    line-height: 1;
+    opacity: 0;
+  }
+  .df-lang-glyphs > span {
+    grid-area: 1 / 1;
+    opacity: 0;
+  }
+
+  @media (hover: hover) {
+    /* Hover: spin the globe out, fade the glyph carousel in. */
+    .df-lang-switcher summary:hover .df-globe,
+    .df-lang-switcher:focus-within .df-globe {
+      opacity: 0;
+      transform: rotate(180deg) scale(0.4);
+    }
+    .df-lang-switcher summary:hover .df-lang-glyphs,
+    .df-lang-switcher:focus-within .df-lang-glyphs {
+      opacity: 1;
+    }
+    .df-lang-switcher summary:hover .df-lang-glyphs > span,
+    .df-lang-switcher:focus-within .df-lang-glyphs > span {
+      /* Longhands only — the `animation` shorthand would reset
+         animation-delay to 0 and desync the per-glyph stagger below. */
+      animation-name: df-glyph-cycle;
+      animation-duration: 1.6s;
+      animation-iteration-count: infinite;
+    }
+    .df-lang-glyphs > span:nth-child(1) {
+      animation-delay: 0s;
+    }
+    .df-lang-glyphs > span:nth-child(2) {
+      animation-delay: 0.533s;
+    }
+    .df-lang-glyphs > span:nth-child(3) {
+      animation-delay: 1.066s;
+    }
+  }
+
+  /* Each glyph flips up into view, holds, then flips out — so the four
+     scripts tumble through like a tiny departures board. */
+  @keyframes df-glyph-cycle {
+    0% {
+      opacity: 0;
+      transform: rotateX(-90deg) translateY(4px);
+    }
+    6% {
+      opacity: 1;
+      transform: rotateX(0) translateY(0);
+    }
+    25% {
+      opacity: 1;
+      transform: rotateX(0) translateY(0);
+    }
+    33% {
+      opacity: 0;
+      transform: rotateX(90deg) translateY(-4px);
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .df-globe,
+    .df-lang-glyphs,
+    .df-lang-glyphs > span {
+      transition: none;
+      animation: none;
+    }
+    /* Reduced-motion: keep it simple — globe stays, no carousel. */
+    .df-lang-switcher summary:hover .df-globe {
+      opacity: 1;
+      transform: none;
+    }
+    .df-lang-switcher summary:hover .df-lang-glyphs {
+      opacity: 0;
+    }
+  }
+</style>
 
 <script>
   const root = document.getElementById("df-lang") as HTMLDetailsElement | null;
