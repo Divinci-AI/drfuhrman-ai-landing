@@ -126,7 +126,7 @@ export const en = {
     /** Sticky composer's email placeholder. */
     emailPlaceholderSticky: "First, your email to start chatting…",
     /** Main chat email placeholder — mentions newsletter opt-in. */
-    emailPlaceholder: "your@email.com, Join Our Newsletter",
+    emailPlaceholder: "your@email.com, join our newsletter",
     askButton: "Ask",
     questionPlaceholder: "Type your question…",
     questionAriaLabel: "Ask the Dr. Fuhrman AI",

@@ -7,7 +7,7 @@ interface WelcomeMessageProps {
 export function WelcomeMessage({ text, avatarUrl }: WelcomeMessageProps) {
   if (!text) return null;
   return (
-    <div className="flex items-start gap-3 md:translate-x-[8px]">
+    <div className="flex items-start gap-3 md:translate-x-[15px]">
       <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-df-green-leaf/20 ring-1 ring-df-green-dark/15">
         {avatarUrl ? (
           <img src={avatarUrl} alt="" aria-hidden="true" className="h-full w-full object-cover" />
