@@ -12,6 +12,7 @@ import { isDisposableEmail } from "../../lib/disposable-emails";
 import { getLocaleMeta, DEFAULT_LOCALE } from "../../i18n/locales";
 import { getUI } from "../../i18n";
 import { withRef } from "../../lib/links";
+import { scrollToHeroChat } from "../../lib/scroll-to-hero";
 
 // Legal links shown under the chat disclaimer (canonical Divinci pages).
 const TERMS_URL = withRef("https://divinci.ai/terms-of-service/", "hero-disclaimer");
@@ -156,6 +157,30 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
 
   // Tidy the interval if the island unmounts mid-preview.
   useEffect(() => stopPreviewTimer, [stopPreviewTimer]);
+
+  // Auto-focus the hero composer on landing — but only on pointer devices,
+  // so a phone visitor doesn't get the on-screen keyboard thrown up the
+  // instant the page loads. MessageInput focuses with preventScroll, so
+  // this never jumps the viewport.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.matchMedia && !window.matchMedia("(hover: hover)").matches) {
+      return;
+    }
+    setFocusSignal((n) => n + 1);
+  }, []);
+
+  // Sticky bar → "bring me to the chat": focus the hero composer, THEN
+  // scroll the orb into view. Order matters — focusing (preventScroll, so it
+  // doesn't jump) must happen before the smooth scroll, otherwise a late
+  // focus call cancels the in-flight scroll. Falls back to focusSignal if the
+  // gate textarea isn't mounted (e.g. mid-conversation compact composer).
+  const focusHeroComposer = useCallback(() => {
+    const ta = document.getElementById("df-question-input");
+    if (ta instanceof HTMLElement) ta.focus({ preventScroll: true });
+    else setFocusSignal((n) => n + 1);
+    scrollToHeroChat();
+  }, []);
 
   // Stable per-visitor session id (held in a ref so it's available
   // synchronously in send/feedback without re-render churn). Restored from
@@ -674,6 +699,7 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
       onSend={handleSend}
       pending={pending}
       quotaExhausted={quotaExhausted}
+      onRequestHeroFocus={focusHeroComposer}
     />
     {tosGate && (
       <TermsModal
