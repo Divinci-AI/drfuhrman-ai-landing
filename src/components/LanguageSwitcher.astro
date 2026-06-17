@@ -59,7 +59,6 @@ function hrefFor(code: string): string {
         <path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"></path>
       </svg>
       <span class="df-lang-glyphs">
-        <span>A</span>
         <span>あ</span>
         <span>中</span>
         <span>ع</span>
@@ -143,20 +142,17 @@ function hrefFor(code: string): string {
       /* Longhands only — the `animation` shorthand would reset
          animation-delay to 0 and desync the per-glyph stagger below. */
       animation-name: df-glyph-cycle;
-      animation-duration: 3.2s;
+      animation-duration: 1.6s;
       animation-iteration-count: infinite;
     }
     .df-lang-glyphs > span:nth-child(1) {
       animation-delay: 0s;
     }
     .df-lang-glyphs > span:nth-child(2) {
-      animation-delay: 0.8s;
+      animation-delay: 0.533s;
     }
     .df-lang-glyphs > span:nth-child(3) {
-      animation-delay: 1.6s;
-    }
-    .df-lang-glyphs > span:nth-child(4) {
-      animation-delay: 2.4s;
+      animation-delay: 1.066s;
     }
   }
 
