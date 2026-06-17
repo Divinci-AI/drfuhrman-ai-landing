@@ -4,6 +4,10 @@ interface ConversationStartersProps {
   starters: string[];
   disabled: boolean;
   onSelect: (starter: string) => void;
+  /** Hover/focus a pill → "type" it into the composer as a live preview. */
+  onPreview?: (starter: string) => void;
+  /** Leave/blur a pill → clear the preview. */
+  onPreviewEnd?: () => void;
 }
 
 export function ConversationStarters({
@@ -11,6 +15,8 @@ export function ConversationStarters({
   starters,
   disabled,
   onSelect,
+  onPreview,
+  onPreviewEnd,
 }: ConversationStartersProps) {
   if (starters.length === 0) return null;
   return (
@@ -24,6 +30,10 @@ export function ConversationStarters({
             key={i}
             type="button"
             onClick={() => onSelect(starter)}
+            onMouseEnter={() => !disabled && onPreview?.(starter)}
+            onMouseLeave={() => onPreviewEnd?.()}
+            onFocus={() => !disabled && onPreview?.(starter)}
+            onBlur={() => onPreviewEnd?.()}
             disabled={disabled}
             className="starter-pill rounded-full bg-df-green-dark px-4 py-2 text-left text-sm font-medium text-white transition hover:bg-df-green-mid/85 disabled:cursor-not-allowed disabled:opacity-80"
           >

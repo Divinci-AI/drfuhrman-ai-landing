@@ -94,6 +94,69 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
 
   const handleSendRef = useRef<(text: string) => void>(() => {});
 
+  // ── Conversation-starter "type-ahead" preview ───────────────────────
+  // Hovering a starter pill types its text into the composer, character by
+  // character, so it looks like the cursor is live in the chat box. Moving
+  // away clears it. Real keystrokes always win and are never clobbered.
+  const previewTimerRef = useRef<number | null>(null);
+  const previewingRef = useRef(false);
+  const userTypedRef = useRef(false);
+  const pendingRef = useRef(false);
+  pendingRef.current = pending;
+
+  const stopPreviewTimer = useCallback(() => {
+    if (previewTimerRef.current !== null) {
+      clearInterval(previewTimerRef.current);
+      previewTimerRef.current = null;
+    }
+  }, []);
+
+  // Wraps setDraft for the composer: a real keystroke cancels any running
+  // preview and hands ownership of the field to the visitor.
+  const handleDraftChange = useCallback(
+    (s: string) => {
+      stopPreviewTimer();
+      previewingRef.current = false;
+      userTypedRef.current = s.trim().length > 0;
+      setDraft(s);
+    },
+    [stopPreviewTimer],
+  );
+
+  const previewStarter = useCallback(
+    (text: string) => {
+      // Desktop-only flourish; never overwrite text the visitor typed.
+      if (pendingRef.current || userTypedRef.current) return;
+      if (
+        typeof window !== "undefined" &&
+        window.matchMedia &&
+        !window.matchMedia("(hover: hover)").matches
+      ) {
+        return;
+      }
+      stopPreviewTimer();
+      previewingRef.current = true;
+      setFocusSignal((n) => n + 1); // focus the textarea so the caret blinks
+      let i = 0;
+      previewTimerRef.current = window.setInterval(() => {
+        i += 1;
+        setDraft(text.slice(0, i));
+        if (i >= text.length) stopPreviewTimer();
+      }, 24);
+    },
+    [stopPreviewTimer],
+  );
+
+  const clearStarterPreview = useCallback(() => {
+    if (!previewingRef.current) return;
+    stopPreviewTimer();
+    previewingRef.current = false;
+    setDraft("");
+  }, [stopPreviewTimer]);
+
+  // Tidy the interval if the island unmounts mid-preview.
+  useEffect(() => stopPreviewTimer, [stopPreviewTimer]);
+
   // Stable per-visitor session id (held in a ref so it's available
   // synchronously in send/feedback without re-render churn). Restored from
   // escrow, or minted lazily on the first send and persisted so the whole
@@ -473,7 +536,13 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
             label={t.tryAsking}
             starters={t.starters}
             disabled={pending}
+            onPreview={previewStarter}
+            onPreviewEnd={clearStarterPreview}
             onSelect={(text) => {
+              // A click commits the preview — stop the typewriter and claim
+              // the field so the trailing mouseleave doesn't wipe it.
+              stopPreviewTimer();
+              previewingRef.current = false;
               // If the visitor already has a valid email, send the starter
               // immediately — one tap, no extra "Ask" click (starters are
               // cheap/cached and use a separate budget, so this doesn't
@@ -483,6 +552,7 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
               if (isValidEmail(email)) {
                 handleSend(text, { starter: true });
               } else {
+                userTypedRef.current = true;
                 setDraft(text);
                 setFocusSignal((n) => n + 1);
               }
@@ -540,7 +610,7 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
                 onEmailChange={setEmail}
                 emailRequired={emailRequired}
                 draft={draft}
-                onDraftChange={setDraft}
+                onDraftChange={handleDraftChange}
                 focusSignal={focusSignal}
                 onSend={handleSend}
                 pending={pending}
@@ -600,7 +670,7 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
       lang={lang}
       emailRequired={emailRequired}
       draft={draft}
-      onDraftChange={setDraft}
+      onDraftChange={handleDraftChange}
       onSend={handleSend}
       pending={pending}
       quotaExhausted={quotaExhausted}
