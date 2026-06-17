@@ -160,14 +160,31 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
 
   // Auto-focus the hero composer on landing — but only on pointer devices,
   // so a phone visitor doesn't get the on-screen keyboard thrown up the
-  // instant the page loads. MessageInput focuses with preventScroll, so
-  // this never jumps the viewport.
+  // instant the page loads. The visitor must land at the very top (logo +
+  // hero fully in view), so we pin the scroll position around the focus:
+  // even with preventScroll some browsers still nudge the page, so we
+  // capture the current offset and restore it if the focus moved it.
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (window.matchMedia && !window.matchMedia("(hover: hover)").matches) {
       return;
     }
+    const y = window.scrollY;
     setFocusSignal((n) => n + 1);
+    // The focus runs a tick later (MessageInput's effect). Pin the scroll
+    // back to where the visitor landed in case the focus nudged it, across
+    // a few frames so we catch it whenever it commits.
+    const pin = () => {
+      if (window.scrollY !== y) window.scrollTo(0, y);
+    };
+    const r = requestAnimationFrame(pin);
+    const t1 = window.setTimeout(pin, 0);
+    const t2 = window.setTimeout(pin, 80);
+    return () => {
+      cancelAnimationFrame(r);
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
   }, []);
 
   // Sticky bar → "bring me to the chat": focus the hero composer, THEN
