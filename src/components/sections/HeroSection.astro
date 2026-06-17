@@ -111,6 +111,22 @@ const t = getUI(lang).hero;
           box-shadow: var(--chat-glass-shadow);
           backdrop-filter: blur(12px) saturate(1.25) contrast(1.05);
           -webkit-backdrop-filter: blur(12px) saturate(1.25) contrast(1.05);
+          /* Fade the orb's top crown to transparent so the botanical art
+             that sits there (the broccoli caduceus) reads through sharply
+             instead of being frosted over. Only the top sliver fades; the
+             body of the orb stays fully frosted for legibility. */
+          -webkit-mask-image: linear-gradient(
+            to bottom,
+            transparent 3%,
+            rgba(0, 0, 0, 0.55) 15%,
+            black 27%
+          );
+          mask-image: linear-gradient(
+            to bottom,
+            transparent 3%,
+            rgba(0, 0, 0, 0.55) 15%,
+            black 27%
+          );
         }
       }
 

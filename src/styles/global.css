@@ -143,3 +143,18 @@ label {
       9 1,
     pointer !important;
 }
+
+/* Descendants of clickable elements (e.g. the <svg> inside the language
+   globe, or an icon inside a button) are otherwise caught by the `*`
+   default-arrow rule above, which shows the wrong cursor over the clickable
+   area. Have them inherit their clickable ancestor's pointing-hand cursor. */
+a *,
+button *,
+[role="button"] *,
+input[type="submit"] *,
+input[type="button"] *,
+.example-card *,
+summary *,
+label * {
+  cursor: inherit;
+}
