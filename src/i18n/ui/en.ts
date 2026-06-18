@@ -227,11 +227,11 @@ export const en = {
     /** Names stay in component code; only role + body translate. */
     roles: [
       "Board-certified family physician, author, nutrition researcher",
-      "Family medicine physician, plant-based nutrition advocate",
+      "Homeopathic physician, plant-based nutrition advocate",
     ],
     bodies: [
       "Dr. Fuhrman is a #1 New York Times best-selling author and a board-certified family physician specializing in nutritional medicine. He coined the term Nutritarian to describe a diet that strives for nutritional excellence, and has devoted four decades of clinical practice and research to documenting how a diet rich in micronutrients can prevent and reverse chronic disease.",
-      "Dr. Cara Fuhrman is a family medicine physician with a passion for plant-based nutrition and helping families build lifelong healthy habits. She partners with Dr. Joel Fuhrman on educational programs that bring the Nutritarian approach to a wider audience. With her father, she co-founded LongevityRx, an advanced longevity-medicine clinic in San Diego.",
+      "Dr. Cara Fuhrman is a homeopathic physician with a passion for plant-based nutrition and helping families build lifelong healthy habits. She partners with Dr. Joel Fuhrman on educational programs that bring the Nutritarian approach to a wider audience. With her father, she co-founded LongevityRx, an advanced longevity-medicine clinic in San Diego.",
     ],
     footerPrefix: "For full bios, books, and research, visit",
   },

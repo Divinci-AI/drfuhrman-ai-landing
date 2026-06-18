@@ -172,11 +172,11 @@ export const fil: UIStrings = {
       "Ang boses ng AI ng DFO ay nakaugat sa mga dekada ng klinikal na pagsasanay at pagtuturo nina Dr. Joel at Dr. Cara Fuhrman.",
     roles: [
       "Board-certified na family physician, may-akda, mananaliksik sa nutrisyon",
-      "Family medicine physician, tagapagtaguyod ng plant-based na nutrisyon",
+      "Homeopathic physician, tagapagtaguyod ng plant-based na nutrisyon",
     ],
     bodies: [
       "Si Dr. Fuhrman ay isang #1 New York Times best-selling na may-akda at board-certified na family physician na dalubhasa sa nutritional medicine. Kanyang ginawa ang terminong Nutritarian para ilarawan ang isang diyetang naghahangad ng kahusayan sa nutrisyon, at inilaan niya ang apat na dekada ng klinikal na pagsasanay at pananaliksik para idokumento kung paano ang isang diyetang mayaman sa micronutrients ay makakapigil at makakapagbalik ng mga kronikong sakit.",
-      "Si Dr. Cara Fuhrman ay isang family medicine physician na may hilig sa plant-based na nutrisyon at sa pagtulong sa mga pamilya na bumuo ng panghabambuhay na malulusog na gawi. Nakikipagtulungan siya kay Dr. Joel Fuhrman sa mga programang pang-edukasyon na nagdadala ng Nutritarian na pamamaraan sa mas malawak na madla. Kasama ang kanyang ama, itinatag niya ang LongevityRx, isang advanced na klinika ng longevity-medicine sa San Diego.",
+      "Si Dr. Cara Fuhrman ay isang homeopathic physician na may hilig sa plant-based na nutrisyon at sa pagtulong sa mga pamilya na bumuo ng panghabambuhay na malulusog na gawi. Nakikipagtulungan siya kay Dr. Joel Fuhrman sa mga programang pang-edukasyon na nagdadala ng Nutritarian na pamamaraan sa mas malawak na madla. Kasama ang kanyang ama, itinatag niya ang LongevityRx, isang advanced na klinika ng longevity-medicine sa San Diego.",
     ],
     footerPrefix: "Para sa kumpletong bios, aklat, at pananaliksik, bisitahin ang",
   },
