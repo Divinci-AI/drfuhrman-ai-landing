@@ -1,8 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 
 // We exercise the worker fetch handler end-to-end with a mocked Env so
-// the basic-auth gate + quota proxy + KV writes are covered without
-// hitting the real upstream.
+// the quota proxy + KV writes are covered without hitting the real upstream.
 
 import workerModule from "./worker";
 
@@ -144,8 +143,6 @@ interface MockEnv {
   ASSETS: { fetch: (req: Request) => Promise<Response> };
   EMAIL_QUOTA: MockKVNamespace;
   QUOTA_DO: MockQuotaDONamespace;
-  BASIC_AUTH_PASSWORD?: string;
-  BASIC_AUTH_USERNAME?: string;
   DIVINCI_API_BASE: string;
   DIVINCI_RELEASE_ID: string;
   RESEND_API_KEY?: string;
@@ -162,16 +159,10 @@ function makeEnv(overrides: Partial<MockEnv> = {}): MockEnv {
     },
     EMAIL_QUOTA: new MockKVNamespace(),
     QUOTA_DO: new MockQuotaDONamespace(),
-    BASIC_AUTH_PASSWORD: "secret-pw",
-    BASIC_AUTH_USERNAME: "dfo",
     DIVINCI_API_BASE: "https://api.stage.divinci.app",
     DIVINCI_RELEASE_ID: "rel-abc-123",
     ...overrides,
   };
-}
-
-function authHeader(user: string, pass: string) {
-  return "Basic " + btoa(`${user}:${pass}`);
 }
 
 class MockExecutionContext {
@@ -193,67 +184,6 @@ function fetchHandler(req: Request, env: MockEnv): Promise<Response> {
   return workerModule.fetch(req, env, ctx);
 }
 
-describe("worker: Basic Auth gate", () => {
-  it("returns 401 with no credentials", async () => {
-    const env = makeEnv();
-    const resp = await fetchHandler(
-      new Request("https://x.workers.dev/"),
-      // @ts-expect-error — partial env for test
-      env,
-    );
-    expect(resp.status).toBe(401);
-    expect(resp.headers.get("www-authenticate")).toContain("Basic");
-  });
-
-  it("returns 401 with wrong password", async () => {
-    const env = makeEnv();
-    const resp = await fetchHandler(
-      new Request("https://x.workers.dev/", {
-        headers: { Authorization: authHeader("dfo", "wrong") },
-      }),
-      // @ts-expect-error
-      env,
-    );
-    expect(resp.status).toBe(401);
-  });
-
-  it("returns 401 with wrong username", async () => {
-    const env = makeEnv();
-    const resp = await fetchHandler(
-      new Request("https://x.workers.dev/", {
-        headers: { Authorization: authHeader("admin", "secret-pw") },
-      }),
-      // @ts-expect-error
-      env,
-    );
-    expect(resp.status).toBe(401);
-  });
-
-  it("passes through to ASSETS with valid credentials", async () => {
-    const env = makeEnv();
-    const resp = await fetchHandler(
-      new Request("https://x.workers.dev/", {
-        headers: { Authorization: authHeader("dfo", "secret-pw") },
-      }),
-      // @ts-expect-error
-      env,
-    );
-    expect(resp.status).toBe(200);
-    expect(await resp.text()).toBe("ASSETS_BODY");
-    expect(env.ASSETS.fetch).toHaveBeenCalledOnce();
-  });
-
-  it("failsafe: BASIC_AUTH_PASSWORD unset → no gate, ASSETS served", async () => {
-    const env = makeEnv({ BASIC_AUTH_PASSWORD: undefined });
-    const resp = await fetchHandler(
-      new Request("https://x.workers.dev/"),
-      // @ts-expect-error
-      env,
-    );
-    expect(resp.status).toBe(200);
-  });
-});
-
 describe("worker: /api/chat-send quota gate", () => {
   it("400 email_invalid when payload missing email", async () => {
     const env = makeEnv();
@@ -261,7 +191,6 @@ describe("worker: /api/chat-send quota gate", () => {
       new Request("https://x.workers.dev/api/chat-send", {
         method: "POST",
         headers: {
-          Authorization: authHeader("dfo", "secret-pw"),
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ newPrompt: "hi" }),
@@ -280,7 +209,6 @@ describe("worker: /api/chat-send quota gate", () => {
       new Request("https://x.workers.dev/api/chat-send", {
         method: "POST",
         headers: {
-          Authorization: authHeader("dfo", "secret-pw"),
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -302,7 +230,6 @@ describe("worker: /api/chat-send quota gate", () => {
       new Request("https://x.workers.dev/api/chat-send", {
         method: "POST",
         headers: {
-          Authorization: authHeader("dfo", "secret-pw"),
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ email: "u@gmail.com", newPrompt: "   " }),
@@ -321,7 +248,6 @@ describe("worker: /api/chat-send quota gate", () => {
       new Request("https://x.workers.dev/api/chat-send", {
         method: "POST",
         headers: {
-          Authorization: authHeader("dfo", "secret-pw"),
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -368,8 +294,7 @@ describe("worker: /api/chat-send quota gate", () => {
         new Request("https://x.workers.dev/api/chat-send", {
           method: "POST",
           headers: {
-            Authorization: authHeader("dfo", "secret-pw"),
-            "Content-Type": "application/json",
+              "Content-Type": "application/json",
           },
           body: JSON.stringify({ email: "u@gmail.com", newPrompt: "hi" }),
         }),
@@ -391,8 +316,7 @@ describe("worker: /api/chat-send quota gate", () => {
         new Request("https://x.workers.dev/api/chat-send", {
           method: "POST",
           headers: {
-            Authorization: authHeader("dfo", "secret-pw"),
-            "Content-Type": "application/json",
+              "Content-Type": "application/json",
           },
           body: JSON.stringify({ email: "u@gmail.com", newPrompt: "again" }),
         }),
@@ -421,8 +345,7 @@ describe("worker: /api/chat-send quota gate", () => {
         new Request("https://x.workers.dev/api/chat-send", {
           method: "POST",
           headers: {
-            Authorization: authHeader("dfo", "secret-pw"),
-            "Content-Type": "application/json",
+              "Content-Type": "application/json",
           },
           body: JSON.stringify({ email: "x@gmail.com", newPrompt: "hi" }),
         }),
@@ -464,8 +387,7 @@ describe("worker: /api/chat-send quota gate", () => {
         new Request("https://x.workers.dev/api/chat-send", {
           method: "POST",
           headers: {
-            Authorization: authHeader("dfo", "secret-pw"),
-            "Content-Type": "application/json",
+              "Content-Type": "application/json",
           },
           body: JSON.stringify({ email: "retry@gmail.com", newPrompt: "hi" }),
         }),
@@ -504,8 +426,7 @@ describe("worker: /api/chat-send quota gate", () => {
         new Request("https://x.workers.dev/api/chat-send", {
           method: "POST",
           headers: {
-            Authorization: authHeader("dfo", "secret-pw"),
-            "Content-Type": "application/json",
+              "Content-Type": "application/json",
           },
           body: JSON.stringify({ email: "s@gmail.com", newPrompt: "q", ...extra }),
         }),
@@ -546,8 +467,7 @@ describe("worker: /api/chat-send quota gate", () => {
         new Request("https://x.workers.dev/api/chat-send", {
           method: "POST",
           headers: {
-            Authorization: authHeader("dfo", "secret-pw"),
-            "Content-Type": "application/json",
+              "Content-Type": "application/json",
           },
           body: JSON.stringify({ email: "cap@gmail.com", newPrompt: "q", starter: true }),
         }),
@@ -580,7 +500,6 @@ describe("worker: /api/chat-send quota gate", () => {
       new Request("https://x.workers.dev/api/chat-send", {
         method: "POST",
         headers: {
-          Authorization: authHeader("dfo", "secret-pw"),
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ email: "raw@example.com", newPrompt: "hi" }),
@@ -612,7 +531,7 @@ describe("worker: Phase 4 verify-email endpoint", () => {
     const env = makeEnv({ VERIFY_TOKEN_SECRET: VERIFY_SECRET });
     const resp = await fetchHandler(
       new Request("https://x.workers.dev/api/verify-email?token=notatoken", {
-        headers: { Authorization: authHeader("dfo", "secret-pw") },
+        headers: {},
       }),
       env,
     );
@@ -626,7 +545,7 @@ describe("worker: Phase 4 verify-email endpoint", () => {
     const env = makeEnv(); // no VERIFY_TOKEN_SECRET
     const resp = await fetchHandler(
       new Request("https://x.workers.dev/api/verify-email?token=x.y.z", {
-        headers: { Authorization: authHeader("dfo", "secret-pw") },
+        headers: {},
       }),
       env,
     );
@@ -639,7 +558,7 @@ describe("worker: Phase 4 verify-email endpoint", () => {
     const resp = await fetchHandler(
       new Request(
         `https://x.workers.dev/api/verify-email?token=${token}`,
-        { headers: { Authorization: authHeader("dfo", "secret-pw") } },
+        { headers: {} },
       ),
       env,
     );
@@ -661,7 +580,7 @@ describe("worker: Phase 4 verify-email endpoint", () => {
     const resp = await fetchHandler(
       new Request(
         `https://x.workers.dev/api/verify-email?token=${token}`,
-        { headers: { Authorization: authHeader("dfo", "secret-pw") } },
+        { headers: {} },
       ),
       env,
     );
@@ -719,8 +638,7 @@ describe("worker: Phase 4 chat-send verified-window flow", () => {
         new Request("https://x.workers.dev/api/chat-send", {
           method: "POST",
           headers: {
-            Authorization: authHeader("dfo", "secret-pw"),
-            "Content-Type": "application/json",
+              "Content-Type": "application/json",
           },
           body: JSON.stringify({ email: "u1@example.com", newPrompt: "first" }),
         }),
@@ -732,8 +650,7 @@ describe("worker: Phase 4 chat-send verified-window flow", () => {
         new Request("https://x.workers.dev/api/chat-send", {
           method: "POST",
           headers: {
-            Authorization: authHeader("dfo", "secret-pw"),
-            "Content-Type": "application/json",
+              "Content-Type": "application/json",
           },
           body: JSON.stringify({ email: "u1@example.com", newPrompt: "again" }),
         }),
@@ -757,8 +674,7 @@ describe("worker: Phase 4 chat-send verified-window flow", () => {
         new Request("https://x.workers.dev/api/chat-send", {
           method: "POST",
           headers: {
-            Authorization: authHeader("dfo", "secret-pw"),
-            "Content-Type": "application/json",
+              "Content-Type": "application/json",
           },
           body: JSON.stringify({ email: "u2@example.com", newPrompt: "first" }),
         }),
@@ -775,8 +691,7 @@ describe("worker: Phase 4 chat-send verified-window flow", () => {
           new Request("https://x.workers.dev/api/chat-send", {
             method: "POST",
             headers: {
-              Authorization: authHeader("dfo", "secret-pw"),
-              "Content-Type": "application/json",
+                  "Content-Type": "application/json",
             },
             body: JSON.stringify({
               email: "u2@example.com",
@@ -792,8 +707,7 @@ describe("worker: Phase 4 chat-send verified-window flow", () => {
         new Request("https://x.workers.dev/api/chat-send", {
           method: "POST",
           headers: {
-            Authorization: authHeader("dfo", "secret-pw"),
-            "Content-Type": "application/json",
+              "Content-Type": "application/json",
           },
           body: JSON.stringify({ email: "u2@example.com", newPrompt: "overflow" }),
         }),
@@ -864,8 +778,7 @@ describe("worker: /api/admin/reset-quota", () => {
         new Request("https://x.workers.dev/api/chat-send", {
           method: "POST",
           headers: {
-            Authorization: authHeader("dfo", "secret-pw"),
-            "Content-Type": "application/json",
+              "Content-Type": "application/json",
           },
           body: JSON.stringify({ email: "mike@gmail.com", newPrompt: "hi" }),
         }),

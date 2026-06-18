@@ -63,7 +63,7 @@ that matters for chat is `LANDING_PAGE_HMAC_KEY`: the Worker HMAC-signs every
 upstream `/ai-chat/anonymous-chat` call with it, and the Divinci API rejects the
 call without a matching signature. Use the **same value as the target env's
 worker secret** (the default `DIVINCI_API_BASE` points at staging, so use the
-staging key). Omit `BASIC_AUTH_PASSWORD` to disable the preview gate locally.
+staging key).
 
 ```bash
 # .dev.vars  — do NOT commit (it's gitignored)
@@ -136,12 +136,7 @@ npm run test:coverage   # unit tests with coverage
 npm run test:e2e        # playwright e2e (local)
 ```
 
-The deployed-target e2e suite expects the preview Basic-Auth credentials to be
-supplied via environment variables — they are intentionally **not** committed:
 
-```bash
-E2E_BASIC_AUTH_USER=... E2E_BASIC_AUTH_PASS=... npm run test:e2e:deployed
-```
 
 ## Deploy (Cloudflare Workers)
 
@@ -202,8 +197,6 @@ gracefully — see the header comment in `src/worker.ts`):
 
 | Secret | Purpose |
 | --- | --- |
-| `BASIC_AUTH_PASSWORD` | Gates the preview/staging build. Unset = gate disabled. |
-| `BASIC_AUTH_USERNAME` | Optional; defaults to `dfo`. |
 | `RESEND_API_KEY` | **Dormant** — Resend key for magic-link verification emails. Not set on staging or prod, so verification emails are OFF (the code guards on it and no-ops). Slated for replacement by the Divinci platform's free-chat gate (Cloudflare Email Service) — see `src/worker-v2.ts` header. |
 | `VERIFY_TOKEN_SECRET` | HMAC key for signing email-verification tokens (`openssl rand -hex 32`). |
 | `LANDING_PAGE_HMAC_KEY` | Shared HMAC key for signing upstream chat API calls. Also goes in `.dev.vars` for local chat. |
@@ -269,7 +262,7 @@ to avoid a token mismatch.
 
 ```
 src/
-  worker.ts            Cloudflare Worker entry (auth gate, quota API, asset passthrough)
+  worker.ts            Cloudflare Worker entry (quota API, asset passthrough)
   quota-coordinator.ts Durable Object: per-email free-message quota
   components/          Astro sections + React chat island
   i18n/                Locale strings + tokenizer

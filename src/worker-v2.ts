@@ -8,12 +8,9 @@
  * `freeChatGate.mode = "captcha+magic-link"`; the platform handles
  * Turnstile + email sending + DKIM + the entire quota engine.
  *
- * Three responsibilities left on the worker:
+ * One responsibility left on the worker:
  *
- *   1. Basic-Auth gate for the preview build (BASIC_AUTH_PASSWORD).
- *      Same shape as v42a; failsafe when secret is unset.
- *
- *   2. Three pass-throughs:
+ *   1. Three pass-throughs (no auth gate):
  *        POST /api/chat-start  → upstream POST /ai-chat/free-chat-gate/start
  *        POST /api/chat-send   → upstream POST /ai-chat/free-chat-gate/chat-send
  *        GET  /api/verify-email → 302 to upstream GET /ai-chat/free-chat-gate/verify
@@ -23,7 +20,7 @@
  *      `freeChatGate.brand` Release config drives the email template
  *      branding ("DrFurman.ai" from-name, etc).
  *
- *   3. Everything else → static-asset pass-through (Astro build).
+ *   2. Everything else → static-asset pass-through (Astro build).
  *
  * Deleted libs (now in the platform):
  *   - quota-coordinator.ts      → server-resources/globals/free-chat-gate/email-quota.ts
@@ -39,9 +36,6 @@
  *   - EMAIL_QUOTA (KV)          → platform Redis
  *   - QUOTA_DO (DO + migration) → platform Redis
  *
- * Required secrets:
- *   - BASIC_AUTH_PASSWORD       (unchanged; gates the preview build)
- *
  * The previously-required CF_EMAIL_API_TOKEN, CF_ACCOUNT_ID,
  * VERIFY_TOKEN_SECRET, and RESEND_API_KEY all move to the platform's
  * Infisical and are no longer needed in wrangler.
@@ -49,17 +43,12 @@
 
 interface Env {
   ASSETS: Fetcher;
-  BASIC_AUTH_PASSWORD?: string;
-  BASIC_AUTH_USERNAME?: string;
   DIVINCI_API_BASE: string;
   DIVINCI_RELEASE_ID: string;
 }
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
-    const authResult = checkBasicAuth(request, env);
-    if (!authResult.ok) return authResult.response;
-
     const url = new URL(request.url);
 
     if (url.pathname === "/api/chat-start" && request.method === "POST") {
@@ -75,42 +64,6 @@ export default {
     return env.ASSETS.fetch(request);
   },
 };
-
-// ── Basic Auth (preserved verbatim from v42a) ───────────────────────────
-
-function checkBasicAuth(
-  request: Request,
-  env: Env,
-): { ok: true } | { ok: false; response: Response } {
-  const expected = env.BASIC_AUTH_PASSWORD;
-  if (!expected) return { ok: true };
-  const username = env.BASIC_AUTH_USERNAME ?? "dfo";
-  const header = request.headers.get("Authorization");
-  if (header?.startsWith("Basic ")) {
-    try {
-      const decoded = atob(header.slice(6));
-      const sep = decoded.indexOf(":");
-      if (sep >= 0) {
-        const u = decoded.slice(0, sep);
-        const p = decoded.slice(sep + 1);
-        if (u === username && constantTimeEq(p, expected)) return { ok: true };
-      }
-    } catch {
-      // fall through
-    }
-  }
-  return {
-    ok: false,
-    response: new Response("Authentication required", {
-      status: 401,
-      headers: {
-        "WWW-Authenticate":
-          'Basic realm="DrFurman.ai preview", charset="UTF-8"',
-        "Cache-Control": "no-store",
-      },
-    }),
-  };
-}
 
 // ── /api/chat-start ─────────────────────────────────────────────────────
 // Proxies to the platform's /start. Body shape mirrors the
@@ -234,15 +187,6 @@ async function forwardJsonToUpstream(
       "Cache-Control": "no-store",
     },
   });
-}
-
-function constantTimeEq(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) {
-    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  }
-  return diff === 0;
 }
 
 function json(status: number, body: unknown): Response {

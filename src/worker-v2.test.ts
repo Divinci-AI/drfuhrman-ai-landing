@@ -1,7 +1,6 @@
 /**
  * Tests for the P7 cutover worker (worker-v2.ts). Covers the four
  * decision branches:
- *   - Basic-Auth gate still works (preserved from v42a)
  *   - /api/chat-start proxies with the upstream body shape
  *   - /api/chat-send forwards the body verbatim
  *   - /api/verify-email builds a 302 to the platform with redirectTo
@@ -14,8 +13,6 @@ import workerModule from "./worker-v2";
 
 interface MockEnv {
   ASSETS: { fetch: ReturnType<typeof vi.fn> };
-  BASIC_AUTH_PASSWORD?: string;
-  BASIC_AUTH_USERNAME?: string;
   DIVINCI_API_BASE: string;
   DIVINCI_RELEASE_ID: string;
 }
@@ -30,52 +27,11 @@ function makeEnv(overrides: Partial<MockEnv> = {}): MockEnv {
         }),
       ),
     },
-    BASIC_AUTH_PASSWORD: "secret-pw",
-    BASIC_AUTH_USERNAME: "dfo",
     DIVINCI_API_BASE: "https://api.stage.divinci.app",
     DIVINCI_RELEASE_ID: "6a118e81e44ce78e97327aa8",
     ...overrides,
   };
 }
-
-function auth() {
-  return "Basic " + btoa("dfo:secret-pw");
-}
-
-describe("worker-v2 — basic auth gate", () => {
-  it("401s without credentials", async () => {
-    const env = makeEnv();
-    const r = await workerModule.fetch(
-      new Request("https://x.workers.dev/"),
-      // @ts-expect-error - partial env
-      env,
-    );
-    expect(r.status).toBe(401);
-  });
-
-  it("passes through to ASSETS on a static path with valid creds", async () => {
-    const env = makeEnv();
-    const r = await workerModule.fetch(
-      new Request("https://x.workers.dev/", {
-        headers: { Authorization: auth() },
-      }),
-      // @ts-expect-error
-      env,
-    );
-    expect(r.status).toBe(200);
-    expect(env.ASSETS.fetch).toHaveBeenCalledOnce();
-  });
-
-  it("failsafe: BASIC_AUTH_PASSWORD unset → no gate", async () => {
-    const env = makeEnv({ BASIC_AUTH_PASSWORD: undefined });
-    const r = await workerModule.fetch(
-      new Request("https://x.workers.dev/"),
-      // @ts-expect-error
-      env,
-    );
-    expect(r.status).toBe(200);
-  });
-});
 
 describe("worker-v2 — /api/chat-start proxy", () => {
   beforeEach(() => vi.restoreAllMocks());
@@ -99,7 +55,6 @@ describe("worker-v2 — /api/chat-start proxy", () => {
       new Request("https://x.workers.dev/api/chat-start", {
         method: "POST",
         headers: {
-          Authorization: auth(),
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -131,7 +86,6 @@ describe("worker-v2 — /api/chat-start proxy", () => {
       new Request("https://x.workers.dev/api/chat-start", {
         method: "POST",
         headers: {
-          Authorization: auth(),
           "Content-Type": "application/json",
         },
         body: "not json",
@@ -149,7 +103,6 @@ describe("worker-v2 — /api/chat-start proxy", () => {
       new Request("https://x.workers.dev/api/chat-start", {
         method: "POST",
         headers: {
-          Authorization: auth(),
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ email: "u@example.com", turnstileToken: "ts" }),
@@ -183,7 +136,6 @@ describe("worker-v2 — /api/chat-send proxy", () => {
       new Request("https://x.workers.dev/api/chat-send", {
         method: "POST",
         headers: {
-          Authorization: auth(),
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -219,7 +171,6 @@ describe("worker-v2 — /api/chat-send proxy", () => {
       new Request("https://x.workers.dev/api/chat-send", {
         method: "POST",
         headers: {
-          Authorization: auth(),
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -242,7 +193,7 @@ describe("worker-v2 — /api/verify-email magic-link landing", () => {
     const r = await workerModule.fetch(
       new Request(
         "https://x.workers.dev/api/verify-email?token=rel-a.aa.exp.sig",
-        { headers: { Authorization: auth() } },
+        {},
       ),
       // @ts-expect-error
       env,
@@ -261,9 +212,7 @@ describe("worker-v2 — /api/verify-email magic-link landing", () => {
   it("400s when token is missing", async () => {
     const env = makeEnv();
     const r = await workerModule.fetch(
-      new Request("https://x.workers.dev/api/verify-email", {
-        headers: { Authorization: auth() },
-      }),
+      new Request("https://x.workers.dev/api/verify-email"),
       // @ts-expect-error
       env,
     );
