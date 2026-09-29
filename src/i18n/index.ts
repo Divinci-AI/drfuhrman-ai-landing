@@ -1,5 +1,5 @@
 /**
- * i18n runtime for the DrFurman.ai landing page.
+ * i18n runtime for the DrFuhrman.ai landing page.
  *
  * - `getUI(code)` returns the typed UI dictionary for a locale,
  *   falling back to English for any locale not yet translated (so the

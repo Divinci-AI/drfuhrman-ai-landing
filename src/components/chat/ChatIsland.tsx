@@ -309,7 +309,7 @@ export function ChatIsland({ lang = DEFAULT_LOCALE }: ChatIslandProps) {
       // from CLAUDE.md — log metadata only, never the raw email.
       const trimmedEmail = email.trim();
       const atIdx = trimmedEmail.lastIndexOf("@");
-      console.info("[DrFurman.ai] email captured (v1 stub)", {
+      console.info("[DrFuhrman.ai] email captured (v1 stub)", {
         hasEmail: true,
         emailDomain: atIdx > 0 ? trimmedEmail.slice(atIdx + 1) : "unknown",
       });

@@ -6,15 +6,15 @@ import type { UIStrings } from "./en";
  */
 export const ro: UIStrings = {
   meta: {
-    title: "DrFurman.ai — îndrumare Nutritarian cu ajutorul AI, 24/7",
+    title: "DrFuhrman.ai — îndrumare Nutritarian cu ajutorul AI, 24/7",
     description:
       "Discută cu AI-ul Dr. Fuhrman, antrenat pe întregul său corpus: 12 cărți, fiecare prelegere video, peste 20.000 de întrebări și răspunsuri ale membrilor și toate cele 180 de produse. Disponibil 24/7 în toate limbile pe care le vorbește Gemini 3.5 Flash.",
-    ogTitle: "DrFurman.ai — îndrumare Nutritarian cu ajutorul AI, 24/7",
+    ogTitle: "DrFuhrman.ai — îndrumare Nutritarian cu ajutorul AI, 24/7",
     ogDescription:
       "Discută 24/7 cu un asistent antrenat pe întreaga operă a Dr. Joel Fuhrman.",
     ogImageAlt:
       "Dr. Fuhrman AI — fiecare carte, fiecare prelegere, fiecare răspuns.",
-    twitterTitle: "DrFurman.ai — îndrumare Nutritarian cu ajutorul AI, 24/7",
+    twitterTitle: "DrFuhrman.ai — îndrumare Nutritarian cu ajutorul AI, 24/7",
     twitterDescription:
       "Discută 24/7 cu un asistent antrenat pe întreaga operă a Dr. Joel Fuhrman.",
   },

@@ -1,5 +1,5 @@
 /**
- * DrFurman.ai landing-page worker — P7 cutover version.
+ * DrFuhrman.ai landing-page worker — P7 cutover version.
  *
  * Replaces the v42a bespoke implementation (quota-coordinator DO +
  * verify-token + resend-send + normalize-email + verify-email-templates +
@@ -18,7 +18,7 @@
  *      Each proxy is a single fetch() with the body shape the upstream
  *      expects. No state, no PII, no quota math. The upstream's
  *      `freeChatGate.brand` Release config drives the email template
- *      branding ("DrFurman.ai" from-name, etc).
+ *      branding ("DrFuhrman.ai" from-name, etc).
  *
  *   2. Everything else → static-asset pass-through (Astro build).
  *
@@ -68,7 +68,7 @@ export default {
 // ── /api/chat-start ─────────────────────────────────────────────────────
 // Proxies to the platform's /start. Body shape mirrors the
 // FreeChatGateStartArgs the SDK uses (releaseId is server-pinned here
-// for the DrFurman release; visitors don't get to pick).
+// for the DrFuhrman release; visitors don't get to pick).
 
 async function proxyStart(request: Request, env: Env): Promise<Response> {
   const reqBody = await request.text();

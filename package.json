@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "DrFurman.ai landing page — Astro + React islands, deployed to Cloudflare Workers Static Assets",
+  "description": "DrFuhrman.ai landing page — Astro + React islands, deployed to Cloudflare Workers Static Assets",
   "scripts": {
     "dev": "astro dev",
     "start": "astro dev",

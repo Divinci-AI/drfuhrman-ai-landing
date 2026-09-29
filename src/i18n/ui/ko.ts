@@ -6,14 +6,14 @@ import type { UIStrings } from "./en";
  */
 export const ko: UIStrings = {
   meta: {
-    title: "DrFurman.ai — AI 기반 Nutritarian 가이드, 24/7",
+    title: "DrFuhrman.ai — AI 기반 Nutritarian 가이드, 24/7",
     description:
       "Dr. Fuhrman의 전체 코퍼스(12권의 책, 모든 영상 강의, 20,000+개의 회원 Q&A, 180개의 모든 제품)로 학습된 AI와 채팅하세요. Gemini 3.5 Flash가 구사하는 모든 언어로 24/7 이용 가능합니다.",
-    ogTitle: "DrFurman.ai — AI 기반 Nutritarian 가이드, 24/7",
+    ogTitle: "DrFuhrman.ai — AI 기반 Nutritarian 가이드, 24/7",
     ogDescription:
       "Dr. Joel Fuhrman의 모든 업적으로 학습된 어시스턴트와 24/7 채팅하세요.",
     ogImageAlt: "Dr. Fuhrman AI — 모든 책, 모든 강의, 모든 답변.",
-    twitterTitle: "DrFurman.ai — AI 기반 Nutritarian 가이드, 24/7",
+    twitterTitle: "DrFuhrman.ai — AI 기반 Nutritarian 가이드, 24/7",
     twitterDescription:
       "Dr. Joel Fuhrman의 모든 업적으로 학습된 어시스턴트와 24/7 채팅하세요.",
   },

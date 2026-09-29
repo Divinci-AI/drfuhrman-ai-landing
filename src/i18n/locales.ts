@@ -1,5 +1,5 @@
 /**
- * Locale registry for the DrFurman.ai landing page.
+ * Locale registry for the DrFuhrman.ai landing page.
  *
  * Single source of truth for:
  *   - the Astro i18n config (`locales` list)

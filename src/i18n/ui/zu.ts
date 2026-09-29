@@ -6,15 +6,15 @@ import type { UIStrings } from "./en";
  */
 export const zu: UIStrings = {
   meta: {
-    title: "DrFurman.ai — Isiqondiso se-Nutritarian esiqhutshwa yi-AI, 24/7",
+    title: "DrFuhrman.ai — Isiqondiso se-Nutritarian esiqhutshwa yi-AI, 24/7",
     description:
       "Xoxa ne-AI ka-Dr. Fuhrman, eqeqeshwe ngawo wonke umsebenzi wakhe — izincwadi ezingu-12, zonke izinkulumo zevidiyo, imibuzo nezimpendulo zamalungu ezingu-20,000+, kanye nayo yonke imikhiqizo engu-180. Iyatholakala 24/7 ngazo zonke izilimi ezikhulunywa yi-Gemini 3.5 Flash.",
-    ogTitle: "DrFurman.ai — Isiqondiso se-Nutritarian esiqhutshwa yi-AI, 24/7",
+    ogTitle: "DrFuhrman.ai — Isiqondiso se-Nutritarian esiqhutshwa yi-AI, 24/7",
     ogDescription:
       "Xoxa 24/7 nomsizi oqeqeshwe ngawo wonke umsebenzi ka-Dr. Joel Fuhrman.",
     ogImageAlt: "Dr. Fuhrman AI — yonke incwadi, yonke inkulumo, yonke impendulo.",
     twitterTitle:
-      "DrFurman.ai — Isiqondiso se-Nutritarian esiqhutshwa yi-AI, 24/7",
+      "DrFuhrman.ai — Isiqondiso se-Nutritarian esiqhutshwa yi-AI, 24/7",
     twitterDescription:
       "Xoxa 24/7 nomsizi oqeqeshwe ngawo wonke umsebenzi ka-Dr. Joel Fuhrman.",
   },

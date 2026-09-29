@@ -6,14 +6,14 @@ import type { UIStrings } from "./en";
  */
 export const ja: UIStrings = {
   meta: {
-    title: "DrFurman.ai — AIによるNutritarianガイダンス、24/7",
+    title: "DrFuhrman.ai — AIによるNutritarianガイダンス、24/7",
     description:
       "Dr. FuhrmanのAIとチャット。彼の全コーパス（12冊の書籍、すべての動画講義、20,000+件の会員Q&A、180すべての製品）で学習済み。Gemini 3.5 Flashが話すあらゆる言語で24/7利用可能。",
-    ogTitle: "DrFurman.ai — AIによるNutritarianガイダンス、24/7",
+    ogTitle: "DrFuhrman.ai — AIによるNutritarianガイダンス、24/7",
     ogDescription:
       "Dr. Joel Fuhrmanの全業績で学習したアシスタントと24/7チャット。",
     ogImageAlt: "Dr. Fuhrman AI — すべての書籍、すべての講義、すべての回答。",
-    twitterTitle: "DrFurman.ai — AIによるNutritarianガイダンス、24/7",
+    twitterTitle: "DrFuhrman.ai — AIによるNutritarianガイダンス、24/7",
     twitterDescription:
       "Dr. Joel Fuhrmanの全業績で学習したアシスタントと24/7チャット。",
   },

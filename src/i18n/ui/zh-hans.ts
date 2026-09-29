@@ -6,14 +6,14 @@ import type { UIStrings } from "./en";
  */
 export const zhHans: UIStrings = {
   meta: {
-    title: "DrFurman.ai — AI 驱动的 Nutritarian 指导，24/7",
+    title: "DrFuhrman.ai — AI 驱动的 Nutritarian 指导，24/7",
     description:
       "与 Dr. Fuhrman 的 AI 对话，它基于他的全部语料库进行训练——12 本书、所有视频讲座、20,000+ 条会员问答以及全部 180 款产品。以 Gemini 3.5 Flash 支持的每一种语言 24/7 提供服务。",
-    ogTitle: "DrFurman.ai — AI 驱动的 Nutritarian 指导，24/7",
+    ogTitle: "DrFuhrman.ai — AI 驱动的 Nutritarian 指导，24/7",
     ogDescription:
       "与基于 Dr. Joel Fuhrman 全部著作训练的助手 24/7 对话。",
     ogImageAlt: "Dr. Fuhrman AI — 每一本书、每一场讲座、每一个答案。",
-    twitterTitle: "DrFurman.ai — AI 驱动的 Nutritarian 指导，24/7",
+    twitterTitle: "DrFuhrman.ai — AI 驱动的 Nutritarian 指导，24/7",
     twitterDescription:
       "与基于 Dr. Joel Fuhrman 全部著作训练的助手 24/7 对话。",
   },

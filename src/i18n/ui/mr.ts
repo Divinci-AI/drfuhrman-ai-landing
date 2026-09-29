@@ -6,15 +6,15 @@ import type { UIStrings } from "./en";
  */
 export const mr: UIStrings = {
   meta: {
-    title: "DrFurman.ai — AI-संचालित Nutritarian मार्गदर्शन, 24/7",
+    title: "DrFuhrman.ai — AI-संचालित Nutritarian मार्गदर्शन, 24/7",
     description:
       "Dr. Fuhrman यांच्या AI शी गप्पा मारा — त्यांच्या संपूर्ण कार्यावर प्रशिक्षित: 12 पुस्तके, प्रत्येक व्हिडिओ व्याख्यान, 20,000+ सदस्यांची प्रश्नोत्तरे आणि सर्व 180 उत्पादने. Gemini 3.5 Flash बोलते त्या प्रत्येक भाषेत, 24/7 उपलब्ध.",
-    ogTitle: "DrFurman.ai — AI-संचालित Nutritarian मार्गदर्शन, 24/7",
+    ogTitle: "DrFuhrman.ai — AI-संचालित Nutritarian मार्गदर्शन, 24/7",
     ogDescription:
       "Dr. Joel Fuhrman यांच्या संपूर्ण कार्यावर प्रशिक्षित सहाय्यकाशी 24/7 बोला.",
     ogImageAlt:
       "Dr. Fuhrman AI — प्रत्येक पुस्तक, प्रत्येक व्याख्यान, प्रत्येक उत्तर.",
-    twitterTitle: "DrFurman.ai — AI-संचालित Nutritarian मार्गदर्शन, 24/7",
+    twitterTitle: "DrFuhrman.ai — AI-संचालित Nutritarian मार्गदर्शन, 24/7",
     twitterDescription:
       "Dr. Joel Fuhrman यांच्या संपूर्ण कार्यावर प्रशिक्षित सहाय्यकाशी 24/7 बोला.",
   },

@@ -1,12 +1,12 @@
 /**
- * English source-of-truth UI dictionary for the DrFurman.ai landing
+ * English source-of-truth UI dictionary for the DrFuhrman.ai landing
  * page. Every other locale file (src/i18n/ui/<code>.ts) is typed as
  * `UIStrings` (derived from this object) so TypeScript enforces that
  * every locale has exactly the same keys.
  *
  * What's NOT here (stays in component code, never translated):
  *   - Brand names: Dr. Fuhrman, Dr. Joel/Cara Fuhrman, Nutritarian,
- *     DrFurman.ai, Divinci, Gemini 3.5 Flash, Gemma 4, DFO
+ *     DrFuhrman.ai, Divinci, Gemini 3.5 Flash, Gemma 4, DFO
  *   - Domains / URLs: drfuhrman.com, drfuhrman.ai
  *   - Numbers + emoji + the 4 stat values' digits (12, 20,000+, 180)
  *   - Book / publication titles (Eat to Live, New York Times, …)
@@ -18,14 +18,14 @@
 
 export const en = {
   meta: {
-    title: "DrFurman.ai — AI-powered Nutritarian guidance, 24/7",
+    title: "DrFuhrman.ai — AI-powered Nutritarian guidance, 24/7",
     description:
       "Chat with Dr. Fuhrman's AI, trained on his entire corpus — 12 books, every video lecture, 20,000+ member Q&As, and all 180 products. Available 24/7 in every language Gemini 3.5 Flash speaks.",
-    ogTitle: "DrFurman.ai — AI-powered Nutritarian guidance, 24/7",
+    ogTitle: "DrFuhrman.ai — AI-powered Nutritarian guidance, 24/7",
     ogDescription:
       "Chat 24/7 with an assistant trained on Dr. Joel Fuhrman's complete body of work.",
     ogImageAlt: "Dr. Fuhrman AI — every book, every lecture, every answer.",
-    twitterTitle: "DrFurman.ai — AI-powered Nutritarian guidance, 24/7",
+    twitterTitle: "DrFuhrman.ai — AI-powered Nutritarian guidance, 24/7",
     twitterDescription:
       "Chat 24/7 with an assistant trained on Dr. Joel Fuhrman's complete body of work.",
   },
